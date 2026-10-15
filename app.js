@@ -956,13 +956,18 @@ function startAluno(S0, P) {
   }
   function proxDias() {
     if (!temSemana(A.p)) return "";
-    const rows = [];
-    for (let k = 1; k <= 6; k++) {
+    const tr = A.p.treinos || [], tiles = [];
+    for (let k = 1; k <= 7; k++) {
       const d = new Date(); d.setDate(d.getDate() + k);
-      const rot = k === 1 ? "Amanhã" : DIAS[d.getDay()];
-      rows.push(`<button class="prox" data-wday="${iso(d)}"><span class="pd"><b>${rot}</b><small>${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}</small></span><span class="pt">${resumoDia(d)}</span><span class="pc" aria-hidden="true">›</span></button>`);
+      const its = diaDe(A.p, d.getDay()).slice().sort((a, b) => MOMENTOS.indexOf(a.momento) - MOMENTOS.indexOf(b.momento));
+      const tags = its.length ? its.map((x) => {
+        if (x.tipo === "cardio") return `<span class="ptag c"><i></i>Cardio${x.min ? " " + x.min + "′" : ""}</span>`;
+        const ix = x.treinoId === "auto" ? -1 : tr.findIndex((y) => y.id === x.treinoId);
+        return `<span class="ptag t" style="--pc:${ix >= 0 ? plateVarG(ix) : "var(--muted)"}"><i></i>${ix >= 0 ? esc(tr[ix].nome) : "Treino"}</span>`;
+      }).join("") : `<span class="ptag r">Descanso</span>`;
+      tiles.push(`<button class="ptile${its.length ? "" : " rest"}" data-wday="${iso(d)}"><span class="pdow">${k === 1 ? "Amanhã" : DIAS[d.getDay()].slice(0, 3)}</span><span class="pnum">${d.getDate()}</span><span class="ptags">${tags}</span></button>`);
     }
-    return `<div class="a-card"><p><b>Próximos dias</b></p><div class="proxlist">${rows.join("")}</div></div>`;
+    return `<div class="a-card prox-card"><div class="row" style="justify-content:space-between"><p><b>Próximos dias</b></p><span class="a-muted" style="font-size:.8em">deslize ›</span></div><div class="prow2">${tiles.join("")}</div></div>`;
   }
   function seusTreinos() {
     const tr = A.p.treinos || [];
