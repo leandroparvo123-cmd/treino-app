@@ -1,0 +1,15 @@
+# Configuração do Netlify: site estático, sem etapa de build.
+[build]
+  publish = "."
+  command = "echo 'Site estático, nada pra compilar'"
+
+# O service worker e o app sempre conferem se há versão nova
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "no-cache"
