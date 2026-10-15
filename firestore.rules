@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// Regras do Caderno de Treino.
+// Cada caderno vive em /espacos/{código secreto}. Só quem tem o link entra.
+// Só o personal (quem abriu o link com a chave de personal) edita fichas e avaliações.
+// Quem tem o link de aluno só lê o treino e registra os treinos feitos.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /espacos/{s} {
+      function logado() { return request.auth != null; }
+      function personal() {
+        return logado() && exists(/databases/$(database)/documents/espacos/$(s)/admins/$(request.auth.uid));
+      }
+      function chaveCerta() {
+        return request.resource.data.k == get(/databases/$(database)/documents/espacos/$(s)/priv/cfg).data.k;
+      }
+
+      // chave do personal: ninguém lê; só pode ser criada uma vez
+      match /priv/cfg {
+        allow read, update, delete: if false;
+        allow create: if logado()
+          && !exists(/databases/$(database)/documents/espacos/$(s)/priv/cfg)
+          && request.resource.data.k is string && request.resource.data.k.size() >= 20;
+      }
+
+      // aparelhos que provaram ter a chave do personal
+      match /admins/{uid} {
+        allow read: if false;
+        allow create, update: if logado() && request.auth.uid == uid && chaveCerta();
+        allow delete: if false;
+      }
+
+      match /pessoas/{p} {
+        allow read: if logado();
+        allow write: if personal();
+      }
+
+      match /avaliacoes/{a} {
+        allow read: if logado();
+        allow write: if personal();
+      }
+
+      match /sessoes/{x} {
+        allow read: if logado();
+        allow create: if logado() && request.resource.data.pessoaId is string;
+        allow update, delete: if personal();
+      }
+    }
+  }
+}
