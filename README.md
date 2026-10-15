@@ -9,3 +9,5 @@ App de treino (personal + tela de treino do aluno), publicado no Netlify e com d
 - `seed.js`: treinos iniciais de um caderno novo
 
 O Netlify publica automaticamente cada mudança na branch `main`.
+
+Atualizações publicadas automaticamente pelo Netlify.
