@@ -300,7 +300,7 @@ const MOMENTOS = ["Manhã", "Almoço", "Tarde", "Noite", "Livre"];
 const isCardio = (s) => s && s.tipo === "cardio";
 const MODELOS = {
   completo: { nome: "Musculação + cardio (5x)", dias: {
-    0: [{ tipo: "cardio", nome: "Caminhada ou mobilidade", min: 30, momento: "Livre" }],
+    0: [{ tipo: "cardio", nome: "Cardio leve ou mobilidade", min: 30, momento: "Livre" }],
     1: [{ tipo: "cardio", nome: "Cardio moderado", min: 30, momento: "Almoço" }, { tipo: "treino", idx: 0, momento: "Noite" }],
     2: [{ tipo: "cardio", nome: "Cardio intervalado", min: 20, momento: "Almoço" }],
     3: [{ tipo: "cardio", nome: "Cardio leve", min: 30, momento: "Almoço" }, { tipo: "treino", idx: 1, momento: "Noite" }],
@@ -311,11 +311,11 @@ const MODELOS = {
   iniciante: { nome: "Iniciante 3x por semana", dias: {
     0: [],
     1: [{ tipo: "treino", idx: 0, momento: "Livre" }],
-    2: [{ tipo: "cardio", nome: "Caminhada leve", min: 20, momento: "Livre" }],
+    2: [{ tipo: "cardio", nome: "Cardio leve", min: 20, momento: "Livre" }],
     3: [{ tipo: "treino", idx: 1, momento: "Livre" }],
-    4: [{ tipo: "cardio", nome: "Caminhada leve", min: 20, momento: "Livre" }],
+    4: [{ tipo: "cardio", nome: "Cardio leve", min: 20, momento: "Livre" }],
     5: [{ tipo: "treino", idx: "auto", momento: "Livre" }],
-    6: [{ tipo: "cardio", nome: "Caminhada leve", min: 20, momento: "Livre" }],
+    6: [{ tipo: "cardio", nome: "Cardio leve", min: 20, momento: "Livre" }],
   } },
 };
 function semanaDoModelo(key, treinos) {
@@ -941,7 +941,7 @@ function startAluno(S0, P) {
       <div class="cc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M5.5 12h3l1.5-2.5 2 5 1.5-2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <div class="cc-txt"><div class="kicker">${esc(it.momento || "Cardio")} · Cardio</div><div class="cc-t">${esc(it.nome || "Cardio")}</div><div class="cc-m">${it.min ? it.min + " minutos" : ""}</div></div>
       ${feito ? '<span class="cc-done">✓ Feito</span>' : big ? "" : `<button class="btn sm" data-cardio="${esc(it.id)}">Registrar</button>`}
-    </section>${feito || !big ? "" : `<button class="a-big" data-cardio="${esc(it.id)}">Fiz ${esc((it.nome || "o cardio").toLowerCase().startsWith("caminhada") ? "a caminhada" : "o cardio")}</button>`}`;
+    </section>${feito || !big ? "" : `<button class="a-big" data-cardio="${esc(it.id)}">Fiz o cardio</button>`}`;
   }
 
 
@@ -1012,7 +1012,7 @@ function startAluno(S0, P) {
     const showTreino = !!tItem || A.forceTreino || !sem;
 
     if (simples()) {
-      const titulo = didT ? "Treino de hoje feito!" : showTreino ? (nomeCurto() ? "Olá, " + esc(nomeCurto()) + "! " : "") + "Hoje é dia do " + esc(t.nome) : cItems.length ? "Hoje é dia de caminhar" : "Hoje é dia de descanso";
+      const titulo = didT ? "Treino de hoje feito!" : showTreino ? (nomeCurto() ? "Olá, " + esc(nomeCurto()) + "! " : "") + "Hoje é dia do " + esc(t.nome) : cItems.length ? "Hoje é dia de cardio" : "Hoje é dia de descanso";
       V().innerHTML = `
         <div class="a-headrow"><p class="a-muted" style="font-size:18px">${dateCap}</p>${themeBtn()}</div>
         <div><h1>${titulo}</h1></div>
@@ -1022,7 +1022,7 @@ function startAluno(S0, P) {
           ${A.p.aviso ? `<div class="a-note">${esc(A.p.aviso)}</div>` : ""}
           <button class="a-big" data-go="start">${didT ? "Treinar de novo" : "Começar o treino"}</button>
           ${other ? `<button class="a-link" data-go="swap">Prefiro fazer o ${esc(other.nome)} hoje</button>` : ""}`
-        : `<div class="a-card"><p>${cItems.length ? "Hoje não tem musculação. A caminhada já é o treino do dia." : "Descansar também faz parte. Se tiver vontade, uma caminhada leve de 20 minutos faz bem."}</p></div>
+        : `<div class="a-card"><p>${cItems.length ? "Hoje não tem musculação. O cardio já é o treino do dia." : "Descansar também faz parte. Se tiver vontade, um cardio leve de 20 minutos faz bem."}</p></div>
            <button class="a-link" data-go="force">Quero treinar mesmo assim</button>`}
         ${weekCard()}${proxDias()}${offline}`;
       return;
@@ -1072,7 +1072,7 @@ function startAluno(S0, P) {
   function saveCardio(quick) {
     const it = A.cardio || {};
     const doc = { pessoaId: P, tipo: "cardio", planId: it.id || null, data: todayISO(), ts: Date.now() };
-    if (quick) { doc.nome = it.nome || "Caminhada"; doc.min = it.min || null; doc.intensidade = "Leve"; doc.obs = ""; doc.km = null; }
+    if (quick) { doc.nome = it.nome || "Cardio"; doc.min = it.min || null; doc.intensidade = "Leve"; doc.obs = ""; doc.km = null; }
     else {
       doc.nome = ($("#cd-nome").value || it.nome || "Cardio").trim();
       doc.min = num($("#cd-min").value); doc.km = num($("#cd-km").value);
@@ -1080,7 +1080,7 @@ function startAluno(S0, P) {
     }
     doc.treinoNome = doc.nome;
     B.set("sessoes", B.newId("sessoes"), doc).catch((e) => console.warn(e));
-    A.screen = "home"; A.cardio = null; toast(quick ? "Caminhada registrada. Muito bem!" : "Cardio registrado"); render();
+    A.screen = "home"; A.cardio = null; toast(quick ? "Cardio registrado. Muito bem!" : "Cardio registrado"); render();
   }
 
   function evol() {

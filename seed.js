@@ -162,7 +162,7 @@ export const SEED = {
     {
      "id": "r34qja",
      "tipo": "cardio",
-     "nome": "Caminhada ou mobilidade",
+     "nome": "Cardio leve ou mobilidade",
      "min": 30,
      "momento": "Livre"
     }
@@ -244,7 +244,7 @@ export const SEED = {
   "nome": "Pai",
   "ordem": 1,
   "simples": true,
-  "aviso": "Comece com 5 a 10 min de bicicleta ou caminhada leve. Use pouco peso: no fim de cada série, ainda daria pra fazer mais umas 3 ou 4. Sentiu dor no peito, tontura ou falta de ar? Pare na hora.",
+  "aviso": "Comece com 5 a 10 min de cardio leve (bicicleta ou esteira). Use pouco peso: no fim de cada série, ainda daria pra fazer mais umas 3 ou 4. Sentiu dor no peito, tontura ou falta de ar? Pare na hora.",
   "ficha": {
    "objetivo": "Força, equilíbrio e autonomia",
    "inicio": "2026-10-15",
@@ -370,7 +370,7 @@ export const SEED = {
     {
      "id": "b7wd95",
      "tipo": "cardio",
-     "nome": "Caminhada leve",
+     "nome": "Cardio leve",
      "min": 20,
      "momento": "Livre"
     }
@@ -387,7 +387,7 @@ export const SEED = {
     {
      "id": "yu9dwq",
      "tipo": "cardio",
-     "nome": "Caminhada leve",
+     "nome": "Cardio leve",
      "min": 20,
      "momento": "Livre"
     }
@@ -404,7 +404,7 @@ export const SEED = {
     {
      "id": "qym99z",
      "tipo": "cardio",
-     "nome": "Caminhada leve",
+     "nome": "Cardio leve",
      "min": 20,
      "momento": "Livre"
     }
