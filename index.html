@@ -439,7 +439,7 @@ html, body, button, input, select, textarea { font-family: "Archivo", system-ui,
   --bg: #0B0D0F; --surface: #15181C; --surface-2: #1E2228; --ink: #F3F5F2; --muted: #8B939A; --line: #262B31;
   --accent: #C8F31D; --accent-ink: #0B0D0F; --good: #C8F31D; --good-bg: #26300B; --warn: #FFC94A; --warn-bg: #2B2410;
   --danger: #FF5A4E; --danger-bg: #331614;
-  --p1: #C8F31D; --p2: #FF7A3D; --p3: #3DD6F5; --p4: #B39CFF; --p5: #8B939A;
+  --p1: #FF5C8A; --p2: #FF7A3D; --p3: #3DD6F5; --p4: #B39CFF; --p5: #8B939A;
   --fig: #4C545E; --fig-far: #333940; --muscle: #FF6A3D; --muscle-far: #A04A30; --prop: #9AA2A9; --floor: #262B31; --stage: #111417;
   --go: #C8F31D; --go-ink: #0B0D0F; --shadow: none; --tabbar: rgba(11,13,15,.92);
   color-scheme: dark;
@@ -509,7 +509,7 @@ html:not(.sport) #aluno.simples h1 { font-weight: 800; letter-spacing: -.01em; }
   --bg: #F3F4EF; --surface: #FFFFFF; --surface-2: #ECEEE7; --ink: #0F1210; --muted: #5C636A; --line: #DCE0D6;
   --good-bg: #EAF6C2; --warn-bg: #FFF3CC; --danger: #C8372D; --danger-bg: #FBE5E3;
   --fig: #B4BDC6; --fig-far: #8F9AA5; --muscle: #F25A2B; --muscle-far: #F0A68E; --prop: #59626B; --floor: #D8DDD3; --stage: #FFFFFF;
-  --p1: #C8F31D; --p2: #FF7A3D; --p3: #22B8DA; --p4: #9C82F5; --p5: #8B939A;
+  --p1: #E8457A; --p2: #F26B2E; --p3: #22B8DA; --p4: #9C82F5; --p5: #8B939A;
   --tabbar: rgba(255,255,255,.94); --ink-accent: #3E5900;
   color-scheme: light;
 }
@@ -573,7 +573,7 @@ details.sess[open] > summary { border-bottom: 1px dashed var(--line); }
 .wkd.today .wc { border-color: var(--ink); }
 .wi { display: flex; gap: 3px; height: 8px; }
 .wi i, .wklegend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.it { background: var(--p1); } .ic { background: var(--p3); } .ir { background: var(--line); }
+.it { background: var(--accent); } .ic { background: var(--p3); } .ir { background: var(--line); }
 html:not(.sport) .it { background: var(--accent); }
 .wklegend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
 .wklegend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -603,7 +603,7 @@ html.sport .cc-t { font-family: var(--display); font-stretch: 78%; text-transfor
 .sd-it.cardio { grid-template-columns: auto 1fr 64px auto auto; }
 .sd-it select, .sd-it input { min-width: 0; width: 100%; border: 0; background: var(--surface-2); color: var(--ink); border-radius: 10px; padding: 9px 8px; font-size: 15px; font-family: inherit; }
 .sd-tag { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; padding: 4px 8px; border-radius: 999px; color: #0B0D0F; }
-.sd-tag.t { background: var(--p1); } .sd-tag.c { background: var(--p3); }
+.sd-tag.t { background: var(--accent); } .sd-tag.c { background: var(--p3); }
 .sd-add { display: flex; gap: 14px; }
 .sd-models { padding: 12px 0; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); }
 @media (max-width: 420px) { .sd-it.cardio { grid-template-columns: auto 1fr 56px auto; } .sd-it.cardio select { grid-column: 2 / 4; } }
