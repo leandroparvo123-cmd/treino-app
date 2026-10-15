@@ -635,6 +635,27 @@ body.is-dragging { user-select: none; -webkit-user-select: none; }
 .erow.moved { animation: movedFlash 1s ease-out; }
 @media (prefers-reduced-motion: reduce) { .erow.moved { animation: none; } }
 @media (max-width: 380px) { .er-fields { padding-left: 0; } .erow .extra { padding-left: 0; } }
+
+/* ---------- ver outros dias, próximos dias e treinos ---------- */
+button.wkd { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.wkd.sel { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--accent); }
+.proxlist { display: flex; flex-direction: column; }
+.prox { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: center; text-align: left; border: 0; background: none; color: inherit; font: inherit; padding: 11px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.prox:first-child { border-top: 0; }
+.prox .pd { display: flex; flex-direction: column; line-height: 1.15; }
+.prox .pd small { color: var(--muted); font-size: .8em; font-variant-numeric: tabular-nums; }
+.prox .pt { font-size: .92em; min-width: 0; }
+.prox .pc { color: var(--muted); font-size: 1.4em; }
+.tr-det { border-top: 1px solid var(--line); padding: 10px 0; }
+.tr-det:first-of-type { border-top: 0; }
+.tr-det > summary { list-style: none; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.tr-det > summary::-webkit-details-marker { display: none; }
+.tr-dot { width: 32px; height: 32px; border-radius: 50%; background: var(--pc); color: #0B0D0F; display: grid; place-items: center; font-weight: 900; flex: none; }
+.tr-n { display: flex; flex-direction: column; font-weight: 800; }
+.tr-n small { font-weight: 500; color: var(--muted); font-size: .8em; }
+.tr-det[open] .a-list { margin: 12px 0; }
+.plan-card { background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--pc); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.plan-card .kicker { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 /* ---------- telas de configuração ---------- */
 .setup { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 40px; display: flex; flex-direction: column; gap: 16px; }
 .setup ol { padding-left: 22px; display: flex; flex-direction: column; gap: 8px; margin: 0; }

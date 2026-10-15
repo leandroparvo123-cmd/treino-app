@@ -925,12 +925,13 @@ function startAluno(S0, P) {
       const ss = A.sess.filter((x) => x.data === k), fezT = ss.some((x) => !isCardio(x)), fezC = ss.some(isCardio);
       const plan = sem ? diaDe(A.p, i) : [], pT = plan.some((x) => x.tipo === "treino"), pC = plan.some((x) => x.tipo === "cardio");
       const done = (pT || pC) ? ((!pT || fezT) && (!pC || fezC)) : (fezT || fezC);
-      return `<div class="wkd${k === iso(now) ? " today" : ""}${done ? " done" : ""}"><span class="wl">${l}</span><span class="wc">${done ? "✓" : d.getDate()}</span><span class="wi">${pT ? '<i class="it"></i>' : ""}${pC ? '<i class="ic"></i>' : ""}${!sem || pT || pC ? "" : '<i class="ir"></i>'}</span></div>`;
+      const sel = (A.selDate || iso(now)) === k;
+      return `<button class="wkd${k === iso(now) ? " today" : ""}${done ? " done" : ""}${sel ? " sel" : ""}" data-wday="${k}" aria-label="Ver ${DIAS[i]}" aria-pressed="${sel}"><span class="wl">${l}</span><span class="wc">${done ? "✓" : d.getDate()}</span><span class="wi">${pT ? '<i class="it"></i>' : ""}${pC ? '<i class="ic"></i>' : ""}${!sem || pT || pC ? "" : '<i class="ir"></i>'}</span></button>`;
     }).join("")}</div>`;
   }
   function weekCard() {
     const mc = monthCount(), st = streakDias(A.sess);
-    return `<div class="a-card"><div class="row" style="justify-content:space-between"><p><b>Esta semana</b></p>${st > 1 ? `<span class="streak">${st} dias seguidos</span>` : ""}</div>${weekPlan()}
+    return `<div class="a-card"><div class="row" style="justify-content:space-between"><p><b>Esta semana</b> <span class="a-muted" style="font-weight:500;font-size:.85em">· toque num dia pra ver</span></p>${st > 1 ? `<span class="streak">${st} dias seguidos</span>` : ""}</div>${weekPlan()}
       ${temSemana(A.p) ? '<div class="wklegend"><span><i class="it"></i>Musculação</span><span><i class="ic"></i>Cardio</span><span><i class="ir"></i>Descanso</span></div>' : ""}
       <p class="a-muted" style="font-size:.85em">${mc ? `Você se mexeu em ${mc} ${mc === 1 ? "dia" : "dias"} este mês.` : "Seu primeiro treino do mês vai aparecer aqui."}</p></div>`;
   }
@@ -943,9 +944,56 @@ function startAluno(S0, P) {
     </section>${feito || !big ? "" : `<button class="a-big" data-cardio="${esc(it.id)}">Fiz ${esc((it.nome || "o cardio").toLowerCase().startsWith("caminhada") ? "a caminhada" : "o cardio")}</button>`}`;
   }
 
+
+  function resumoDia(d) {
+    const its = diaDe(A.p, d.getDay()), tr = A.p.treinos || [];
+    if (!its.length) return "Descanso";
+    return its.slice().sort((a, b) => MOMENTOS.indexOf(a.momento) - MOMENTOS.indexOf(b.momento)).map((x) => {
+      if (x.tipo === "cardio") return `${esc(x.nome || "Cardio")}${x.min ? " " + x.min + " min" : ""}`;
+      const t = x.treinoId === "auto" ? null : tr.find((y) => y.id === x.treinoId);
+      return `<b>${t ? esc(t.nome) : "Próximo treino"}</b>`;
+    }).join(" · ");
+  }
+  function proxDias() {
+    if (!temSemana(A.p)) return "";
+    const rows = [];
+    for (let k = 1; k <= 6; k++) {
+      const d = new Date(); d.setDate(d.getDate() + k);
+      const rot = k === 1 ? "Amanhã" : DIAS[d.getDay()];
+      rows.push(`<button class="prox" data-wday="${iso(d)}"><span class="pd"><b>${rot}</b><small>${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}</small></span><span class="pt">${resumoDia(d)}</span><span class="pc" aria-hidden="true">›</span></button>`);
+    }
+    return `<div class="a-card"><p><b>Próximos dias</b></p><div class="proxlist">${rows.join("")}</div></div>`;
+  }
+  function seusTreinos() {
+    const tr = A.p.treinos || [];
+    return `<div class="a-card"><p><b>Seus treinos</b></p>${tr.map((t, i) => `<details class="tr-det"><summary><span class="tr-dot" style="--pc:${plateVarG(i)}">${esc((t.nome.match(/\b([A-Z])$/) || [0, String.fromCharCode(65 + i)])[1])}</span><span class="tr-n">${esc(t.nome)}<small>${t.exercicios.length} exercícios</small></span></summary>
+      <ul class="a-list">${t.exercicios.map((ex, j) => { const l = lastFor(ex); return `<li><b>${j + 1}.</b><span style="flex:1">${esc(exNome(ex))}<br><small class="a-muted">${esc(ex.series)} × ${esc(ex.reps)}${l && l.carga != null ? " · última: " + fmtN(l.carga) + " kg" : ""}</small></span></li>`; }).join("")}</ul>
+      <button class="a-big soft" data-dostart="${i}">Fazer o ${esc(t.nome)} agora</button></details>`).join("")}</div>`;
+  }
+  function dayView(dt) {
+    const dow = dt.getDay(), its = diaDe(A.p, dow).slice().sort((a, b) => MOMENTOS.indexOf(a.momento) - MOMENTOS.indexOf(b.momento));
+    const tr = A.p.treinos || [], past = iso(dt) < todayISO();
+    const feito = A.sess.filter((x) => x.data === iso(dt));
+    const label = dt.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+    const blocos = its.length ? its.map((x) => {
+      if (x.tipo === "cardio") return `<section class="cardio-card"><div class="cc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></div><div class="cc-txt"><div class="kicker">${esc(x.momento || "")} · Cardio</div><div class="cc-t">${esc(x.nome || "Cardio")}</div><div class="cc-m">${x.min ? x.min + " minutos" : ""}</div></div>${feito.some(isCardio) ? '<span class="cc-done">✓ Feito</span>' : ""}</section>`;
+      const k = x.treinoId === "auto" ? -1 : tr.findIndex((y) => y.id === x.treinoId);
+      const t = k >= 0 ? tr[k] : null;
+      if (!t) return `<section class="rest-card"><div class="kicker">${esc(x.momento || "")} · Musculação</div><div class="cc-t">Próximo treino da sequência</div><p class="a-muted" style="margin:0">O app escolhe o treino certo no dia, seguindo a ordem A, B, C.</p></section>`;
+      return `<section class="plan-card" style="--pc:${plateVarG(k)}"><div class="kicker">${esc(x.momento || "")} · Musculação</div><div class="cc-t">${esc(t.nome)}</div>
+        <ul class="a-list">${t.exercicios.map((ex, j) => `<li><b>${j + 1}.</b><span>${esc(exNome(ex))} <small class="a-muted">${esc(ex.series)} × ${esc(ex.reps)}</small></span></li>`).join("")}</ul>
+        ${feito.some((y) => !isCardio(y)) ? '<span class="cc-done">✓ Feito</span>' : `<button class="a-big soft" data-dostart="${k}">Fazer esse treino agora</button>`}</section>`;
+    }).join("") : `<section class="rest-card"><div class="kicker">${DIAS[dow]}</div><div class="cc-t">Dia de descanso</div><p class="a-muted" style="margin:0">Nada planejado pra esse dia.</p></section>`;
+    V().innerHTML = `
+      <div class="a-headrow"><button class="a-link" data-go="today" style="padding:0">‹ Voltar pra hoje</button>${themeBtn()}</div>
+      <div><div class="label">${past ? "Dia que passou" : "Planejado"}</div><h1 style="margin-top:4px">${esc(label.charAt(0).toUpperCase() + label.slice(1))}</h1></div>
+      ${blocos}
+      ${weekCard()}${proxDias()}${seusTreinos()}`;
+  }
   function home() {
     if (!A.loaded) { V().innerHTML = `<p class="a-muted">Carregando seu treino…</p>`; return; }
     if (!A.p || !(A.p.treinos || []).length) return notReady();
+    if (A.selDate && A.selDate !== todayISO()) return dayView(parseISO(A.selDate));
     const tr = A.p.treinos, dow = new Date().getDay(), sem = temSemana(A.p);
     const hoje = sem ? diaDe(A.p, dow) : [{ id: "x", tipo: "treino", treinoId: "auto" }];
     const tItem = hoje.find((x) => x.tipo === "treino"), cItems = hoje.filter((x) => x.tipo === "cardio");
@@ -971,7 +1019,7 @@ function startAluno(S0, P) {
           ${other ? `<button class="a-link" data-go="swap">Prefiro fazer o ${esc(other.nome)} hoje</button>` : ""}`
         : `<div class="a-card"><p>${cItems.length ? "Hoje não tem musculação. A caminhada já é o treino do dia." : "Descansar também faz parte. Se tiver vontade, uma caminhada leve de 20 minutos faz bem."}</p></div>
            <button class="a-link" data-go="force">Quero treinar mesmo assim</button>`}
-        ${weekCard()}${offline}`;
+        ${weekCard()}${proxDias()}${offline}`;
       return;
     }
     const hr = new Date().getHours(), hello = hr < 12 ? "Bom dia" : hr < 18 ? "Boa tarde" : "Boa noite";
@@ -996,7 +1044,7 @@ function startAluno(S0, P) {
       ${blocos}
       ${A.p.aviso ? `<div class="a-note">${esc(A.p.aviso)}</div>` : ""}
       ${showTreino ? `<div class="a-card"><p><b>Exercícios do ${esc(t.nome)}</b></p><ul class="a-list">${t.exercicios.map((ex, i) => { const l = lastFor(ex); return `<li><b>${i + 1}.</b><span style="flex:1">${esc(exNome(ex))}<br><small class="a-muted">${esc(ex.series)} × ${esc(ex.reps)}${l && l.carga != null ? " · última: " + fmtN(l.carga) + " kg" : ""}</small></span></li>`; }).join("")}</ul></div>` : ""}
-      ${weekCard()}${offline}`;
+      ${weekCard()}${proxDias()}${seusTreinos()}${offline}`;
   }
 
   // registrar cardio
@@ -1187,6 +1235,8 @@ function startAluno(S0, P) {
     if (b.dataset.atab) { A.tab = b.dataset.atab; ls.set("al.tab." + P, A.tab); window.scrollTo(0, 0); render(); return; }
     if (b.dataset.acal) { A.calMonth = shiftMonth(A.calMonth, b.dataset.acal === "next" ? 1 : -1); render(); return; }
     if (b.dataset.apick != null) { A.tIdx = +b.dataset.apick; render(); return; }
+    if (b.dataset.wday) { A.selDate = b.dataset.wday === todayISO() ? null : b.dataset.wday; window.scrollTo(0, 0); render(); return; }
+    if (b.dataset.dostart != null) { A.tIdx = +b.dataset.dostart; A.selDate = null; A.screen = "ex"; A.exIdx = 0; A.marks = {}; A.inputs = {}; A.savedOnce = false; ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); keepAwake(); render(); return; }
     if (b.dataset.cardio) {
       const it = diaDe(A.p, new Date().getDay()).find((x) => x.id === b.dataset.cardio) || { id: b.dataset.cardio, nome: "Cardio" };
       A.cardio = it; A.cInt = "Moderado";
@@ -1211,6 +1261,7 @@ function startAluno(S0, P) {
       return;
     }
     const go = b.dataset.go; if (!go) return;
+    if (go === "today") { A.selDate = null; window.scrollTo(0, 0); render(); return; }
     if (go === "force") { A.forceTreino = true; A.tIdx = null; render(); return; }
     if (go === "save-cardio") { saveCardio(false); return; }
     if (go === "start") { A.screen = "ex"; A.exIdx = 0; A.marks = {}; A.inputs = {}; A.savedOnce = false; ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); keepAwake(); render(); }
