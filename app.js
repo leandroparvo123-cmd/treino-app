@@ -556,6 +556,58 @@ function startAdmin(S0, K0) {
       ${t.exercicios.length ? `<div class="savebar"><button class="btn${simples ? " go" : ""}" data-act="save-session">Terminei o treino de hoje</button></div>` : ""}</div>`;
   }
 
+  // ---------- editor da semana: escolha um dia e toque (ou arraste) as atividades ----------
+  const PAL_CARDIO = [["Cardio leve", 30], ["Cardio moderado", 30], ["Cardio intervalado", 20]];
+  const DIA_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  function tIndex(p, id) { return (p.treinos || []).findIndex((t) => t.id === id); }
+  function chipHtml(p, it) {
+    if (it.tipo === "treino") {
+      const k = tIndex(p, it.treinoId), t = (p.treinos || [])[k];
+      const lt = it.treinoId === "auto" ? "↻" : t ? letter(t, k) : "?", nm = it.treinoId === "auto" ? "Próximo treino" : t ? t.nome : "Treino apagado";
+      return `<button class="wchip t${S.chipEd === it.id ? " on" : ""}" data-act="chip" data-iid="${esc(it.id)}" style="--pc:${k >= 0 ? plateVar(k) : "var(--muted)"}"><b>${esc(lt)}</b><span>${esc(nm)}</span><small>${esc(it.momento || "")}</small></button>`;
+    }
+    return `<button class="wchip c${S.chipEd === it.id ? " on" : ""}" data-act="chip" data-iid="${esc(it.id)}"><b>${it.min ? esc(it.min) + "′" : "♥"}</b><span>${esc(it.nome || "Cardio")}</span><small>${esc(it.momento || "")}</small></button>`;
+  }
+  function chipEditor(p, d, it) {
+    const mom = `<div class="seg mom">${MOMENTOS.map((m) => `<button data-act="ch-mom" data-m="${m}"${m === it.momento ? ' class="on"' : ""}>${m}</button>`).join("")}</div>`;
+    const body = it.tipo === "treino"
+      ? `<div class="seg">${(p.treinos || []).map((t, k) => `<button data-act="ch-tre" data-t="${esc(t.id)}"${t.id === it.treinoId ? ' class="on"' : ""}>${esc(letter(t, k))}</button>`).join("")}<button data-act="ch-tre" data-t="auto"${it.treinoId === "auto" ? ' class="on"' : ""}>Próximo</button></div>`
+      : `<div class="ce-row"><input data-edit="sem" data-f="nome" value="${esc(it.nome || "")}" aria-label="Atividade" placeholder="Ex.: Esteira"><input data-edit="sem" data-f="min" inputmode="numeric" value="${esc(it.min ?? "")}" aria-label="Minutos" placeholder="min" class="ce-min"><span class="ce-u">min</span></div>`;
+    return `<div class="chip-ed" data-day="${d}" data-iid="${esc(it.id)}">${body}${mom}<div class="ce-act"><button class="btn danger sm" data-act="ch-del">Tirar do dia</button><button class="btn sm" data-act="ch-ok">Pronto</button></div></div>`;
+  }
+  function weekEditor(p) {
+    if (S.wSel == null) S.wSel = new Date().getDay();
+    const pal = (p.treinos || []).map((t, k) => `<button class="pal-it t" data-pal="t|${esc(t.id)}" style="--pc:${plateVar(k)}"><b>${esc(letter(t, k))}</b>${esc(t.nome)}</button>`).join("")
+      + `<button class="pal-it t" data-pal="t|auto" style="--pc:var(--muted)"><b>↻</b>Próximo</button>`
+      + PAL_CARDIO.map(([n, m]) => `<button class="pal-it c" data-pal="c|${n}|${m}"><b>${m}′</b>${n.replace("Cardio ", "")}</button>`).join("");
+    const days = [1, 2, 3, 4, 5, 6, 0].map((d) => {
+      const its = diaDe(p, d), ed = its.find((x) => x.id === S.chipEd);
+      return `<div class="wd${S.wSel === d ? " sel" : ""}" data-day="${d}">
+        <button class="wd-h" data-act="wd-sel" aria-pressed="${S.wSel === d}">${DIA_CURTO[d]}</button>
+        <div class="wd-items">${its.length ? its.map((it) => chipHtml(p, it)).join("") : `<span class="wd-rest">Descanso</span>`}</div>
+      </div>${ed ? chipEditor(p, d, ed) : ""}`;
+    }).join("");
+    return `<div class="sheet wk-ed">
+      <div class="pal-wrap"><div class="label">Adicionar em <b class="pal-day">${DIAS[S.wSel]}</b></div><div class="pal">${pal}</div>
+        <p class="hint">Toque no dia e depois na atividade. Também dá pra arrastar. Toque num item pra mudar o horário ou tirar.</p></div>
+      <div class="wdays">${days}</div>
+      <details class="wk-more"><summary>Modelos prontos</summary><div class="row">${Object.entries(MODELOS).map(([k, m]) => `<button class="btn ghost sm" data-act="sem-tpl" data-tpl="${k}" data-arm="tpl-${k}">${esc(m.nome)}</button>`).join("")}<button class="btn danger sm" data-act="sem-clear" data-arm="tpl-clear">Limpar semana</button></div></details>
+    </div>`;
+  }
+  function redrawWeek() { const el = document.querySelector(".wk-ed"); if (el) el.outerHTML = weekEditor(pessoa()); }
+  function addToDay(p, d, spec) {
+    const [tp, a, b] = spec.split("|"); p.semana = p.semana || {};
+    const lst = (p.semana[d] = Array.isArray(p.semana[d]) ? p.semana[d] : []);
+    lst.push(tp === "t" ? { id: rnd(6), tipo: "treino", treinoId: a, momento: "Noite" } : { id: rnd(6), tipo: "cardio", nome: a, min: +b || 30, momento: "Almoço" });
+    savePessoa(p, true); redrawWeek();
+    const row = document.querySelector(`.wd[data-day="${d}"]`); if (row) { row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 500); }
+  }
+  function moveItem(p, from, to, iid) {
+    if (from === to) return; const src = diaDe(p, from), k = src.findIndex((x) => x.id === iid); if (k < 0) return;
+    const [it] = src.splice(k, 1); p.semana[from] = src; p.semana[to] = (Array.isArray(p.semana[to]) ? p.semana[to] : []).concat(it);
+    savePessoa(p, true); redrawWeek();
+  }
+
   function renderMontar(v) {
     const p = pessoa(), f = p.ficha || {};
     const others = S.pessoas.filter((o) => o.id !== p.id && o.treinos && o.treinos.length);
@@ -591,39 +643,21 @@ function startAdmin(S0, K0) {
     v.innerHTML = `<div class="col">
       <section class="profile">
         <div class="profile-head"><span class="av big">${esc((p.nome || "?").trim().charAt(0).toUpperCase())}</span>
-          <div class="field" style="flex:1"><label class="label" for="pn-nome">Nome do perfil</label><input id="pn-nome" class="txt" data-edit="pnome" value="${esc(p.nome)}" maxlength="30" aria-label="Nome do perfil"></div></div>
-        <label class="toggle" for="pn-simples"><input type="checkbox" id="pn-simples" data-edit="simples"${p.simples ? " checked" : ""}> Modo simples: letras grandes e só marcar séries, sem anotar carga</label>
-        <div class="profile-link">
-          <div class="label">Tela de treino de ${esc(p.nome)}</div>
-          <p class="sub" style="margin:0">Por este link a pessoa treina, marca as séries e vê a própria evolução. Não precisa de conta nem senha, e ela não consegue editar nada.</p>
-          <div class="linkbox">${esc(link)}</div>
-          <div class="row"><a class="btn sm" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(link)}">Abrir tela de treino</a><button class="btn ghost sm" data-copy="${esc(link)}">Copiar</button><a class="btn ghost sm" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent("Esse é o seu treino. Toque no link pra abrir: " + link)}">WhatsApp</a><button class="btn ghost sm" data-qr="${esc(link)}">QR code</button></div>
-          <div class="qrbox" hidden></div>
-        </div>
+          <input id="pn-nome" class="txt pn-nome" data-edit="pnome" value="${esc(p.nome)}" maxlength="30" aria-label="Nome do perfil" placeholder="Nome">
+          <label class="sw" for="pn-simples" title="Letras grandes e só marcar séries, sem anotar carga"><input type="checkbox" id="pn-simples" data-edit="simples"${p.simples ? " checked" : ""}><span>Modo simples</span></label></div>
+        <div class="plink"><span class="label">Link do aluno</span>
+          <div class="seg"><a target="_blank" rel="noopener" href="${esc(link)}">Abrir</a><button data-copy="${esc(link)}">Copiar</button><a target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent("Esse é o seu treino. Toque no link pra abrir: " + link)}">WhatsApp</a><button data-qr="${esc(link)}">QR</button></div>
+          <div class="qrbox" hidden></div></div>
       </section>
-      <div><h2>Ficha de ${esc(p.nome)}</h2><div class="sub">Tudo que você muda aqui é salvo sozinho e aparece no celular de ${esc(p.nome)}.</div></div>
-      <div class="sheet">
+      <div class="sec-h"><h2>Ficha</h2><span class="saved">Salva sozinha</span></div>
+      <div class="sheet ficha-ed">
         <div class="field"><label class="label" for="f-obj">Objetivo</label><input id="f-obj" class="txt" data-edit="f-objetivo" value="${esc(f.objetivo || "")}" placeholder="Ex.: Força e equilíbrio"></div>
-        <div class="grid2"><div class="field"><label class="label" for="f-ini">Início</label><input id="f-ini" type="date" data-edit="f-inicio" value="${esc(f.inicio || "")}"></div><div class="field"><label class="label" for="f-tro">Trocar a ficha em</label><input id="f-tro" type="date" data-edit="f-troca" value="${esc(f.troca || "")}"></div></div>
-        <div class="row">${[4, 6, 8, 12].map((w) => `<button class="btn ghost sm" data-act="ficha-weeks" data-w="${w}">${w} semanas</button>`).join("")}</div>
-        <div class="field"><label class="label" for="f-obs">Observações</label><textarea id="f-obs" data-edit="f-obs" placeholder="Ex.: 2 a 3 vezes por semana, com um dia de folga entre os treinos">${esc(f.obs || "")}</textarea></div>
+        <div class="fdates"><div class="field"><label class="label" for="f-ini">Início</label><input id="f-ini" type="date" data-edit="f-inicio" value="${esc(f.inicio || "")}"></div><div class="field"><label class="label" for="f-tro">Trocar em</label><input id="f-tro" type="date" data-edit="f-troca" value="${esc(f.troca || "")}"></div></div>
+        <div class="fdur"><span class="label">Duração</span><div class="seg">${[4, 6, 8, 12].map((w) => { const on = f.inicio && f.troca === plusDays(f.inicio, 7 * w); return `<button data-act="ficha-weeks" data-w="${w}"${on ? ' class="on"' : ""}>${w} sem</button>`; }).join("")}</div></div>
+        <div class="field"><label class="label" for="f-obs">Observações</label><textarea id="f-obs" rows="2" data-edit="f-obs" placeholder="Opcional">${esc(f.obs || "")}</textarea></div>
       </div>
-      <div><h2>Semana de ${esc(p.nome)}</h2><div class="sub">O que fazer em cada dia. Aparece na tela de treino como "Hoje".</div></div>
-      <div class="sheet semana">
-        ${[1, 2, 3, 4, 5, 6, 0].map((d) => { const its = diaDe(p, d); return `<div class="sd" data-day="${d}">
-          <div class="sd-h"><b>${DIAS[d]}</b>${its.length ? "" : '<span class="sd-rest">Descanso</span>'}</div>
-          ${its.map((it) => `<div class="sd-it ${it.tipo}" data-iid="${esc(it.id)}">
-            ${it.tipo === "treino"
-              ? `<span class="sd-tag t">Musculação</span><select data-edit="sem" data-f="treinoId" aria-label="Treino">${(p.treinos || []).map((t) => `<option value="${esc(t.id)}"${t.id === it.treinoId ? " selected" : ""}>${esc(t.nome)}</option>`).join("")}<option value="auto"${it.treinoId === "auto" ? " selected" : ""}>Próximo da sequência</option></select>`
-              : `<span class="sd-tag c">Cardio</span><input data-edit="sem" data-f="nome" value="${esc(it.nome || "")}" placeholder="Ex.: Esteira" aria-label="Atividade"><input data-edit="sem" data-f="min" inputmode="numeric" value="${esc(it.min ?? "")}" placeholder="min" aria-label="Minutos" class="sd-min">`}
-            <select data-edit="sem" data-f="momento" aria-label="Momento">${MOMENTOS.map((m) => `<option${m === it.momento ? " selected" : ""}>${m}</option>`).join("")}</select>
-            <button class="x" data-act="sem-del" aria-label="Remover">×</button></div>`).join("")}
-          <div class="sd-add"><button class="btn link sm" data-act="sem-add" data-tipo="treino">+ Musculação</button><button class="btn link sm" data-act="sem-add" data-tipo="cardio">+ Cardio</button></div>
-        </div>`; }).join("")}
-        <div class="sd-models"><span class="label">Usar um modelo pronto</span>
-          <div class="row">${Object.entries(MODELOS).map(([k, m]) => `<button class="btn ghost sm" data-act="sem-tpl" data-tpl="${k}" data-arm="tpl-${k}">${esc(m.nome)}</button>`).join("")}<button class="btn danger sm" data-act="sem-clear" data-arm="tpl-clear">Limpar semana</button></div>
-        </div>
-      </div>
+      <div class="sec-h"><h2>Semana</h2></div>
+      ${weekEditor(p)}
       ${cards || `<div class="empty"><b>Nenhum treino ainda</b>Crie do zero ou copie os treinos de outra pessoa e ajuste.</div>`}
       <button class="btn ghost" data-act="add-treino">+ Novo treino</button>
       ${others.length ? `<div class="sheet"><div class="label">Copiar de outra pessoa</div><div class="row">${others.map((o) => `<button class="btn ghost" data-act="copy-from" data-from="${esc(o.id)}">Copiar de ${esc(o.nome)}</button>`).join("")}</div></div>` : ""}
@@ -708,6 +742,8 @@ function startAdmin(S0, K0) {
     if ($("#admin").hidden) return;
     if (e.target.classList && e.target.classList.contains("modal")) { closeModal("#" + e.target.id); return; }
     const b = e.target.closest("button"); if (!b) return;
+    if (wDragEnd && Date.now() - wDragEnd < 400) return;
+    if (b.dataset.pal) { addToDay(pessoa(), S.wSel, b.dataset.pal); return; }
     if (b.dataset.close) { closeModal(b.dataset.close); return; }
     if (b.dataset.how) { const ex = findEx(b.dataset.how); if (ex) showHow(ex); return; }
     if (b.dataset.libhow) { showHow({ id: "lib", lib: b.dataset.libhow }); return; }
@@ -739,6 +775,16 @@ function startAdmin(S0, K0) {
     if (act === "del-aval") { if (!arm(b, "Confirmar")) return; B.del("avaliacoes", b.dataset.aid).catch(writeErr); return; }
     if (act === "del-sess") { if (!arm(b, "Confirmar")) return; B.del("sessoes", b.dataset.sid).catch(writeErr); return; }
     if (act === "ficha-weeks") { p.ficha = p.ficha || {}; if (!p.ficha.inicio) p.ficha.inicio = todayISO(); p.ficha.troca = plusDays(p.ficha.inicio, 7 * +b.dataset.w); savePessoa(p, true); render(); return; }
+    if (act === "wd-sel") { S.wSel = +b.closest("[data-day]").dataset.day; S.chipEd = null; redrawWeek(); return; }
+    if (act === "chip") { const id = b.dataset.iid; S.chipEd = S.chipEd === id ? null : id; S.wSel = +b.closest("[data-day]").dataset.day; redrawWeek(); return; }
+    if (act === "ch-ok") { S.chipEd = null; redrawWeek(); return; }
+    if (act === "ch-mom" || act === "ch-tre" || act === "ch-del") {
+      const pe = b.closest(".chip-ed"), d = +pe.dataset.day, it = diaDe(p, d).find((x) => x.id === pe.dataset.iid); if (!it) return;
+      if (act === "ch-mom") it.momento = b.dataset.m;
+      if (act === "ch-tre") it.treinoId = b.dataset.t;
+      if (act === "ch-del") { p.semana[d] = diaDe(p, d).filter((x) => x.id !== it.id); S.chipEd = null; }
+      savePessoa(p, true); redrawWeek(); return;
+    }
     if (act === "sem-add" || act === "sem-del") {
       const d = +b.closest("[data-day]").dataset.day; p.semana = p.semana || {}; const lst = (p.semana[d] = Array.isArray(p.semana[d]) ? p.semana[d] : []);
       if (act === "sem-add") lst.push(b.dataset.tipo === "treino" ? { id: rnd(6), tipo: "treino", treinoId: (p.treinos && p.treinos[0] && p.treinos[0].id) || "auto", momento: "Noite" } : { id: rnd(6), tipo: "cardio", nome: "Cardio", min: 30, momento: "Almoço" });
@@ -777,6 +823,38 @@ function startAdmin(S0, K0) {
       } catch (err) { writeErr(err); }
     }
   });
+
+  // arrastar atividades da paleta (ou de um dia) pra outro dia da semana
+  let wDrag = null, wDragEnd = 0;
+  document.addEventListener("pointerdown", (e) => {
+    if ($("#admin").hidden) return;
+    const src = e.target.closest(".pal-it, .wchip"); if (!src) return;
+    const from = src.closest("[data-day]");
+    wDrag = { src, x: e.clientX, y: e.clientY, on: false, ghost: null, over: null, spec: src.dataset.pal || null, iid: src.dataset.iid || null, from: from ? +from.dataset.day : null };
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!wDrag) return;
+    if (!wDrag.on) {
+      if (Math.hypot(e.clientX - wDrag.x, e.clientY - wDrag.y) < 10) return;
+      wDrag.on = true; const g = wDrag.src.cloneNode(true); g.className += " drag-ghost"; document.body.appendChild(g); wDrag.ghost = g;
+      wDrag.src.classList.add("lifted"); document.body.classList.add("is-dragging");
+    }
+    e.preventDefault();
+    wDrag.ghost.style.transform = `translate(${e.clientX - 30}px, ${e.clientY - 22}px)`;
+    const under = document.elementFromPoint(e.clientX, e.clientY), row = under && under.closest(".wd");
+    if (wDrag.over !== row) { if (wDrag.over) wDrag.over.classList.remove("drop"); if (row) row.classList.add("drop"); wDrag.over = row; }
+    if (e.clientY < 80) window.scrollBy(0, -12); else if (e.clientY > window.innerHeight - 120) window.scrollBy(0, 12);
+  }, { passive: false });
+  const wEnd = () => {
+    if (!wDrag) return; const d = wDrag; wDrag = null;
+    if (!d.on) return;
+    wDragEnd = Date.now(); d.ghost.remove(); d.src.classList.remove("lifted"); document.body.classList.remove("is-dragging");
+    if (!d.over) return; d.over.classList.remove("drop");
+    const to = +d.over.dataset.day, p = pessoa(); S.wSel = to;
+    if (d.spec) addToDay(p, to, d.spec); else if (d.iid != null && d.from != null) { if (d.from === to) redrawWeek(); else moveItem(p, d.from, to, d.iid); }
+  };
+  document.addEventListener("pointerup", wEnd);
+  document.addEventListener("pointercancel", () => { if (wDrag && wDrag.on) { wDrag.ghost.remove(); wDrag.src.classList.remove("lifted"); document.body.classList.remove("is-dragging"); if (wDrag.over) wDrag.over.classList.remove("drop"); } wDrag = null; });
 
   // arrastar exercícios pela alça (funciona com o dedo e com o mouse)
   let drag = null;
