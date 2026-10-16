@@ -792,6 +792,33 @@ html.sport.light .setrow.t-valida .sn { color: var(--ink); }
 .fpr p { margin: 4px 0 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
 .fpr .fpr-l { color: var(--ink); font-weight: 600; font-size: 12.5px; }
 .fpr .btn { align-self: flex-start; }
+
+/* ---------- intensidade do cardio ---------- */
+.ibar { display: inline-flex; gap: 2px; align-items: flex-end; flex: none; }
+.ibar i { width: 5px; background: var(--line); border-radius: 1px; }
+.ibar i:nth-child(1) { height: 6px; } .ibar i:nth-child(2) { height: 8px; } .ibar i:nth-child(3) { height: 10px; } .ibar i:nth-child(4) { height: 12px; } .ibar i:nth-child(5) { height: 14px; }
+.ibar i.on { background: var(--cardio); }
+.ibar.n-intervalado i.on { background: var(--p1, #FF5C8A); }
+.cc-lv { display: flex; align-items: center; gap: 7px; margin-top: 5px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+.cc-lv b { color: var(--ink); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: 11.5px; }
+.cguia { border: 1px solid var(--line); border-left: 3px solid var(--cardio); border-radius: 3px; background: var(--surface); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.cg-h { display: flex; align-items: center; gap: 12px; }
+.cg-h .ibar { transform: scale(1.5); transform-origin: left bottom; margin-right: 12px; }
+.cg-h .kicker { font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.cg-h b { font-size: 16px; }
+.cguia dl { margin: 0; display: grid; grid-template-columns: 96px 1fr; gap: 6px 10px; font-size: 14px; line-height: 1.4; }
+.cguia dt { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; padding-top: 2px; }
+.cguia dd { margin: 0; }
+.cg-desc { border-top: 1px solid var(--line); padding-top: 10px; font-size: 14px; line-height: 1.4; }
+.cg-desc .kicker { font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--cardio); margin-bottom: 3px; }
+#aluno.simples .cguia dl { grid-template-columns: 1fr; font-size: 17px; }
+.ce-desc { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 3px; padding: 8px; font-size: 14px; font-family: inherit; resize: vertical; }
+
+.seg > button[aria-pressed="true"] { background: var(--accent); color: #0B0D0F; }
+.cg-more { margin-top: -4px; }
+.cg-more > summary { cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--cardio); padding: 4px 2px 8px; list-style: none; }
+.cg-more > summary::-webkit-details-marker { display: none; }
+.cg-more > summary::before { content: "▸ "; } .cg-more[open] > summary::before { content: "▾ "; }
 </style>
 </head>
 <body>

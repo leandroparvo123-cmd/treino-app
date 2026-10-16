@@ -342,6 +342,47 @@ const MODELOS = {
   } },
 };
 // ============================================================
+//  Intensidade do cardio: o que é leve, moderado e intervalado
+// ============================================================
+const CARDIO_NIVEIS = {
+  leve: { nome: "Leve", nota: "3–4 de 10", barra: 2, fala: "Dá pra conversar normalmente, com frases inteiras.", fc: "60–70% da frequência máxima", como: "Ritmo firme, mas confortável. Você termina com vontade de fazer mais.", serve: "Ajuda a secar e a recuperar, sem tirar energia da musculação." },
+  moderado: { nome: "Moderado", nota: "5–6 de 10", barra: 3, fala: "Dá pra falar frases curtas, mas não dá pra cantar.", fc: "70–80% da frequência máxima", como: "Respiração mais pesada e suando, no mesmo ritmo do começo ao fim.", serve: "Melhora o fôlego e gasta mais calorias." },
+  intervalado: { nome: "Intervalado", nota: "tiros 8–9 de 10", barra: 5, fala: "No tiro, mal dá pra falar uma palavra. Na pausa, a respiração volta.", fc: "tiros a 85–90% da frequência máxima", como: "Alterna tiros fortes com pausas leves, sem parar de pedalar ou andar.", serve: "Mais resultado em menos tempo. Não faça em dias seguidos." },
+};
+function nivelCardio(it) {
+  if (it && CARDIO_NIVEIS[it.nivel]) return it.nivel;
+  const n = String((it && it.nome) || "").toLowerCase();
+  if (/interval|tiro|hiit/.test(n)) return "intervalado";
+  if (/moder/.test(n)) return "moderado";
+  if (/leve|caminh|mobil|regener|passeio/.test(n)) return "leve";
+  return null;
+}
+function intervaloPlano(min) {
+  const m = Math.max(12, parseInt(min, 10) || 20), n = Math.max(2, Math.floor((m - 8) / 3)), fim = Math.max(2, m - 5 - n * 3);
+  return { n, txt: `5 min leve pra aquecer → ${n}× (1 min forte + 2 min leve) → ${fim} min leve pra soltar` };
+}
+function barraHtml(k) { const b = CARDIO_NIVEIS[k].barra; return `<span class="ibar n-${k}" aria-hidden="true">${[1, 2, 3, 4, 5].map((i) => `<i${i <= b ? ' class="on"' : ""}></i>`).join("")}</span>`; }
+function cardioResumo(it) {
+  const k = nivelCardio(it); if (!k) return "";
+  const N = CARDIO_NIVEIS[k];
+  return `<div class="cc-lv">${barraHtml(k)}<b>${N.nome}</b><span>${k === "intervalado" ? "tiros fortes + pausas" : N.fala.split(",")[0].replace(/\.$/, "")}</span></div>`;
+}
+function cardioGuia(it) {
+  const k = nivelCardio(it), N = k && CARDIO_NIVEIS[k];
+  if (!N && !it.desc) return "";
+  return `<div class="cguia">
+    ${N ? `<div class="cg-h">${barraHtml(k)}<div><div class="kicker">Intensidade</div><b>${N.nome} · ${N.nota}</b></div></div>
+    <dl>
+      <dt>Como saber</dt><dd>${esc(N.fala)}</dd>
+      ${k === "intervalado" ? `<dt>Como fazer</dt><dd>${esc(intervaloPlano(it.min).txt)}</dd>` : `<dt>Como fazer</dt><dd>${esc(N.como)}</dd>`}
+      <dt>Pra que serve</dt><dd>${esc(N.serve)}</dd>
+      <dt>Se usar relógio</dt><dd>${esc(N.fc)}</dd>
+    </dl>` : ""}
+    ${it.desc ? `<div class="cg-desc"><div class="kicker">Recado do personal</div>${esc(it.desc)}</div>` : ""}
+  </div>`;
+}
+
+// ============================================================
 //  Fichas prontas (treinos + semana) que o personal aplica com um toque
 // ============================================================
 const E = (lib, aquec, adapt, series, reps, descanso, nome) => ({ lib, aquec, adapt, series, reps, descanso, ...(nome ? { nome } : {}) });
@@ -631,7 +672,10 @@ function startAdmin(S0, K0) {
     const mom = `<div class="seg mom">${MOMENTOS.map((m) => `<button data-act="ch-mom" data-m="${m}"${m === it.momento ? ' class="on"' : ""}>${m}</button>`).join("")}</div>`;
     const body = it.tipo === "treino"
       ? `<div class="seg">${(p.treinos || []).map((t, k) => `<button data-act="ch-tre" data-t="${esc(t.id)}"${t.id === it.treinoId ? ' class="on"' : ""}>${esc(letter(t, k))}</button>`).join("")}<button data-act="ch-tre" data-t="auto"${it.treinoId === "auto" ? ' class="on"' : ""}>Próximo</button></div>`
-      : `<div class="ce-row"><input data-edit="sem" data-f="nome" value="${esc(it.nome || "")}" aria-label="Atividade" placeholder="Ex.: Esteira"><input data-edit="sem" data-f="min" inputmode="numeric" value="${esc(it.min ?? "")}" aria-label="Minutos" placeholder="min" class="ce-min"><span class="ce-u">min</span></div>`;
+      : `<div class="ce-row"><input data-edit="sem" data-f="nome" value="${esc(it.nome || "")}" aria-label="Atividade" placeholder="Ex.: Esteira"><input data-edit="sem" data-f="min" inputmode="numeric" value="${esc(it.min ?? "")}" aria-label="Minutos" placeholder="min" class="ce-min"><span class="ce-u">min</span></div>
+        <div class="seg">${Object.entries(CARDIO_NIVEIS).map(([k, N]) => `<button data-act="ch-niv" data-n="${k}"${nivelCardio(it) === k ? ' class="on"' : ""}>${N.nome}</button>`).join("")}</div>
+        ${nivelCardio(it) ? `<p class="hint">${esc(CARDIO_NIVEIS[nivelCardio(it)].nota)} · ${esc(CARDIO_NIVEIS[nivelCardio(it)].fala)}</p>` : ""}
+        <textarea data-edit="sem" data-f="desc" rows="2" class="ce-desc" placeholder="Recado opcional. Ex.: bike na carga 8, cadência 80" aria-label="Recado pro aluno">${esc(it.desc || "")}</textarea>`;
     return `<div class="chip-ed" data-day="${d}" data-iid="${esc(it.id)}">${body}${mom}<div class="ce-act"><button class="btn danger sm" data-act="ch-del">Tirar do dia</button><button class="btn sm" data-act="ch-ok">Pronto</button></div></div>`;
   }
   function weekEditor(p) {
@@ -841,10 +885,14 @@ function startAdmin(S0, K0) {
     if (act === "wd-sel") { S.wSel = +b.closest("[data-day]").dataset.day; S.chipEd = null; redrawWeek(); return; }
     if (act === "chip") { const id = b.dataset.iid; S.chipEd = S.chipEd === id ? null : id; S.wSel = +b.closest("[data-day]").dataset.day; redrawWeek(); return; }
     if (act === "ch-ok") { S.chipEd = null; redrawWeek(); return; }
-    if (act === "ch-mom" || act === "ch-tre" || act === "ch-del") {
+    if (act === "ch-mom" || act === "ch-tre" || act === "ch-del" || act === "ch-niv") {
       const pe = b.closest(".chip-ed"), d = +pe.dataset.day, it = diaDe(p, d).find((x) => x.id === pe.dataset.iid); if (!it) return;
       if (act === "ch-mom") it.momento = b.dataset.m;
       if (act === "ch-tre") it.treinoId = b.dataset.t;
+      if (act === "ch-niv") {
+        it.nivel = b.dataset.n; const re = /\b(leve|moderad[oa]|intervalad[oa])\b/i, m = (it.nome || "").match(re);
+        if (m) { const fem = /a$/i.test(m[1]) || /^(bike|esteira|corrida|caminhada)/i.test(it.nome); it.nome = it.nome.replace(re, { leve: "leve", moderado: fem ? "moderada" : "moderado", intervalado: fem ? "intervalada" : "intervalado" }[it.nivel]); }
+      }
       if (act === "ch-del") { p.semana[d] = diaDe(p, d).filter((x) => x.id !== it.id); S.chipEd = null; }
       savePessoa(p, true); redrawWeek(); return;
     }
@@ -1118,9 +1166,9 @@ function startAluno(S0, P) {
     const feito = A.sess.some((x) => isCardio(x) && x.data === todayISO() && (x.planId === it.id || !x.planId));
     return `<section class="cardio-card${feito ? " done" : ""}">
       <div class="cc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M5.5 12h3l1.5-2.5 2 5 1.5-2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div class="cc-txt"><div class="kicker">${esc(it.momento || "Cardio")} · Cardio</div><div class="cc-t">${esc(it.nome || "Cardio")}</div><div class="cc-m">${it.min ? it.min + " minutos" : ""}</div></div>
+      <div class="cc-txt"><div class="kicker">${esc(it.momento || "Cardio")} · Cardio</div><div class="cc-t">${esc(it.nome || "Cardio")}</div><div class="cc-m">${it.min ? it.min + " minutos" : ""}</div>${cardioResumo(it)}</div>
       ${feito ? '<span class="cc-done">✓ Feito</span>' : big ? "" : `<button class="btn sm" data-cardio="${esc(it.id)}">Registrar</button>`}
-    </section>${feito || !big ? "" : `<button class="a-big" data-cardio="${esc(it.id)}">Fiz o cardio</button>`}`;
+    </section>${feito ? "" : big ? cardioGuia(it) : (nivelCardio(it) || it.desc) ? `<details class="cg-more"><summary>Como fazer o ${esc((it.nome || "cardio").toLowerCase())}</summary>${cardioGuia(it)}</details>` : ""}${feito || !big ? "" : `<button class="a-big" data-cardio="${esc(it.id)}">Fiz o cardio</button>`}`;
   }
 
 
@@ -1160,7 +1208,7 @@ function startAluno(S0, P) {
     const feito = A.sess.filter((x) => x.data === iso(dt));
     const label = dt.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
     const blocos = its.length ? its.map((x) => {
-      if (x.tipo === "cardio") return `<section class="cardio-card"><div class="cc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></div><div class="cc-txt"><div class="kicker">${esc(x.momento || "")} · Cardio</div><div class="cc-t">${esc(x.nome || "Cardio")}</div><div class="cc-m">${x.min ? x.min + " minutos" : ""}</div></div>${feito.some(isCardio) ? '<span class="cc-done">✓ Feito</span>' : ""}</section>`;
+      if (x.tipo === "cardio") return `<section class="cardio-card"><div class="cc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></div><div class="cc-txt"><div class="kicker">${esc(x.momento || "")} · Cardio</div><div class="cc-t">${esc(x.nome || "Cardio")}</div><div class="cc-m">${x.min ? x.min + " minutos" : ""}</div>${cardioResumo(x)}</div>${feito.some(isCardio) ? '<span class="cc-done">✓ Feito</span>' : ""}</section>${cardioGuia(x)}`;
       const k = x.treinoId === "auto" ? -1 : tr.findIndex((y) => y.id === x.treinoId);
       const t = k >= 0 ? tr[k] : null;
       if (!t) return `<section class="rest-card"><div class="kicker">${esc(x.momento || "")} · Musculação</div><div class="cc-t">Próximo treino da sequência</div><p class="a-muted" style="margin:0">O app escolhe o treino certo no dia, seguindo a ordem A, B, C.</p></section>`;
@@ -1234,10 +1282,12 @@ function startAluno(S0, P) {
   // registrar cardio
   function cardioScreen() {
     const it = A.cardio || {};
+    if (!A.cInt) { const k = nivelCardio(it); A.cInt = k === "leve" ? "Leve" : k === "intervalado" ? "Forte" : "Moderado"; }
     const ints = ["Leve", "Moderado", "Forte"];
     V().innerHTML = `
       <div class="a-top"><span class="a-count">Registrar cardio</span><button class="a-link" data-go="home" style="padding:0">Cancelar</button></div>
       <h1>${esc(it.nome || "Cardio")}</h1>
+      ${cardioGuia(it)}
       <div class="field"><label class="label" for="cd-nome">Atividade</label><input class="txt" id="cd-nome" value="${esc(it.nome || "")}" placeholder="Ex.: Esteira, bike, corrida"></div>
       <div class="a-inputs">
         <div class="field"><label class="label" for="cd-min">Minutos</label><input id="cd-min" inputmode="numeric" value="${esc(it.min || "")}" placeholder="30"></div>
@@ -1437,7 +1487,7 @@ function startAluno(S0, P) {
     if (b.dataset.dostart != null) { A.tIdx = +b.dataset.dostart; A.selDate = null; A.screen = "ex"; A.exIdx = 0; A.marks = {}; A.inputs = {}; A.savedOnce = false; ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); keepAwake(); render(); return; }
     if (b.dataset.cardio) {
       const it = diaDe(A.p, new Date().getDay()).find((x) => x.id === b.dataset.cardio) || { id: b.dataset.cardio, nome: "Cardio" };
-      A.cardio = it; A.cInt = "Moderado";
+      A.cardio = it; A.cInt = null;
       if (simples()) { saveCardio(true); return; }
       A.screen = "cardio"; render(); return;
     }
