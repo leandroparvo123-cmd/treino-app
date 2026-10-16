@@ -19,14 +19,18 @@ export const SEED = {
      {
       "id": "a1",
       "lib": "agachamento",
-      "series": 4,
+      "aquec": 2,
+      "adapt": 1,
+      "series": 3,
       "reps": "6–10",
       "descanso": "2 min"
      },
      {
       "id": "a2",
       "lib": "supino",
-      "series": 4,
+      "aquec": 1,
+      "adapt": 1,
+      "series": 3,
       "reps": "6–10",
       "descanso": "2 min"
      },

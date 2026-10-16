@@ -292,6 +292,29 @@ const writeErr = (e) => { console.warn(e); toast(e && e.code === "permission-den
 
 
 // ============================================================
+//  Tipos de série: aquecimento, adaptação (reconhecimento) e válidas
+// ============================================================
+const TIPOS = {
+  aquec: { curto: "AQ", nome: "Aquecimento", rest: "45s", reps: "12–15" },
+  adapt: { curto: "AD", nome: "Adaptação", rest: "60s", reps: "4–6" },
+  valida: { curto: "", nome: "Válida" },
+};
+const nInt = (v, lo, hi, d) => { const n = parseInt(v, 10); return isNaN(n) ? d : Math.max(lo, Math.min(hi, n)); };
+function planoSeries(ex) {
+  const out = [], aq = nInt(ex.aquec, 0, 4, 0), ad = nInt(ex.adapt, 0, 4, 0), va = nInt(ex.series, 1, 8, 2);
+  for (let i = 0; i < aq; i++) out.push({ tipo: "aquec", ord: i, reps: ex.repsAq || TIPOS.aquec.reps });
+  for (let i = 0; i < ad; i++) out.push({ tipo: "adapt", ord: i, reps: ex.repsAd || TIPOS.adapt.reps });
+  for (let i = 0; i < va; i++) out.push({ tipo: "valida", ord: i, reps: ex.reps });
+  return out;
+}
+function doseTxt(ex) {
+  const aq = nInt(ex.aquec, 0, 4, 0), ad = nInt(ex.adapt, 0, 4, 0), va = nInt(ex.series, 1, 8, 2);
+  const vezes = /^\d+(–\d+)?$/.test(String(ex.reps)) ? " vezes" : "";
+  if (!aq && !ad) return `${va} séries de ${ex.reps}${vezes}`;
+  return [aq ? `${aq} aquec.` : "", ad ? `${ad} adapt.` : "", `${va} ${va === 1 ? "válida" : "válidas"} de ${ex.reps}${vezes}`].filter(Boolean).join(" + ");
+}
+
+// ============================================================
 //  Semana: o que fazer em cada dia (treino, cardio ou descanso)
 // ============================================================
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -394,7 +417,7 @@ function sessRow(s, canDelete) {
   }
   const its = Object.values(s.itens || {}), fe = its.reduce((a, it) => a + (it.feitas || 0), 0), n = its.length;
   const notes = its.filter((it) => it.obs).map((it) => `<span class="sobs"><b>${esc(it.nome)}:</b> ${esc(it.obs)}</span>`).join("");
-  const det = its.filter((it) => Array.isArray(it.series) && it.series.some((x) => x.kg != null)).map((it) => `<span class="sdet">${esc(it.nome)}: ${it.series.map((x) => `${x.kg != null ? fmtN(x.kg) : "—"}×${x.reps ?? "—"}`).join(" · ")}</span>`).join("");
+  const det = its.filter((it) => Array.isArray(it.series) && it.series.some((x) => x.kg != null)).map((it) => { const v = it.series.filter((x) => !x.tipo || x.tipo === "valida"), o = it.series.length - v.length; return `<span class="sdet">${esc(it.nome)}: ${(v.length ? v : it.series).map((x) => `${x.kg != null ? fmtN(x.kg) : "—"}×${x.reps ?? "—"}`).join(" · ")}${o ? ` <small>(+${o} aquec./adapt.)</small>` : ""}</span>`; }).join("");
   return `<details class="sess"><summary><span class="d">${fmtDate(s.data)}</span><span class="t">${esc(s.treinoNome)}<small>${n} exercício${n === 1 ? "" : "s"}${fe ? " · " + fe + " séries" : ""}${notes ? " · com anotações" : ""}</small></span>${canDelete ? `<button class="btn danger sm" data-act="del-sess" data-sid="${esc(s.id)}" data-arm="s-${esc(s.id)}">Apagar</button>` : ""}</summary>
     ${det || notes ? `<div class="sessbody">${det}${notes}</div>` : `<div class="sessbody"><span class="sdet">Sem cargas anotadas.</span></div>`}</details>`;
 }
@@ -510,7 +533,7 @@ function startAdmin(S0, K0) {
       const nSets = Math.max(1, Math.min(6, parseInt(ex.series, 10) || 2)), done = d.sets || [];
       const sets = simples ? `<div class="sets">${Array.from({ length: nSets }, (_, i) => `<button class="set" data-set="${i}" data-ex="${esc(ex.id)}" aria-pressed="${!!done[i]}">${done[i] ? "✓ Feita" : "Série " + (i + 1)}<small>${esc(ex.reps)}${/^\d+(–\d+)?$/.test(String(ex.reps)) ? " vezes" : ""}</small></button>`).join("")}</div>` : "";
       const anotado = d.carga || d.reps || (d.sets || []).some(Boolean);
-      return `<div class="ex${anotado ? " done" : ""}">${thumb(ex)}<div class="info"><div class="name">${esc(exNome(ex))}</div><div class="meta">${esc(ex.series)} séries de ${esc(ex.reps)} · descanso ${esc(ex.descanso)}</div></div>
+      return `<div class="ex${anotado ? " done" : ""}">${thumb(ex)}<div class="info"><div class="name">${esc(exNome(ex))}</div><div class="meta">${esc(doseTxt(ex))} · descanso ${esc(ex.descanso)}</div></div>
         <button class="howbtn" data-how="${esc(ex.id)}">▸ Ver como fazer</button>
         <div class="last">${lastTxt}${subir ? '<span class="pill">Suba a carga</span>' : ""}</div>${sets}
         <div class="inputs"><div class="field"><label class="label" for="c-${esc(ex.id)}">${simples ? "Peso usado (kg, se tiver)" : "Carga (kg)"}</label><input id="c-${esc(ex.id)}" inputmode="decimal" data-draft="carga" data-ex="${esc(ex.id)}" value="${esc(d.carga ?? "")}" placeholder="${last && last.carga != null ? fmtN(last.carga) : "0"}"></div>
@@ -518,7 +541,7 @@ function startAdmin(S0, K0) {
         <button class="rest-btn" data-rest="${restSecs(ex.descanso)}" data-exnome="${esc(exNome(ex))}">⏱ ${simples ? "Descansar " : ""}${esc(ex.descanso)}</button></div></div>`;
     }).join("");
     const feitos = t.exercicios.filter((ex) => { const d = draft[ex.id] || {}; return d.carga || d.reps || (d.sets || []).some(Boolean); }).length;
-    const f = p.ficha || {}, st = fichaState(f), mins = Math.round(t.exercicios.reduce((a, ex) => a + (parseInt(ex.series, 10) || 3) * (restSecs(ex.descanso) + 45), 0) / 60 / 5) * 5;
+    const f = p.ficha || {}, st = fichaState(f), mins = Math.round(t.exercicios.reduce((a, ex) => a + planoSeries(ex).length * (restSecs(ex.descanso) + 45), 0) / 60 / 5) * 5;
     const pick = p.treinos.map((tr, i) => `<button data-treino="${esc(tr.id)}" aria-pressed="${tr.id === selId}" style="--pc:${plateVar(i)}"><i>${esc(letter(tr, i))}</i>${esc(tr.nome)}${tr.id === nextId && tr.id !== selId ? " <small>próximo</small>" : ""}</button>`).join("");
     const hero = `<section class="hero" style="--pc:${plateVar(ti)}">
         <div><div class="kicker">${selId === nextId ? "Treino de hoje" : "Treino escolhido"}</div><div class="title">${esc(t.nome)}</div><div class="meta2">${t.exercicios.length} exercícios · uns ${Math.max(10, mins)} min${f.objetivo ? " · " + esc(f.objetivo) : ""}</div></div>
@@ -549,12 +572,17 @@ function startAdmin(S0, K0) {
               <div class="er-move"><button data-act="ex-up" aria-label="Subir"${t.exercicios.indexOf(ex) === 0 ? " disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button data-act="ex-down" aria-label="Descer"${t.exercicios.indexOf(ex) === t.exercicios.length - 1 ? " disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
             </div>
             <div class="er-fields">
-              <div class="field"><label class="label" for="es-${esc(ex.id)}">Séries</label><input id="es-${esc(ex.id)}" data-edit="series" inputmode="numeric" value="${esc(ex.series)}"></div>
+              <div class="field"><label class="label" for="ea-${esc(ex.id)}">Aquec.</label><input id="ea-${esc(ex.id)}" data-edit="aquec" inputmode="numeric" value="${esc(ex.aquec ?? 0)}"></div>
+              <div class="field"><label class="label" for="eb-${esc(ex.id)}">Adapt.</label><input id="eb-${esc(ex.id)}" data-edit="adapt" inputmode="numeric" value="${esc(ex.adapt ?? 0)}"></div>
+              <div class="field"><label class="label" for="es-${esc(ex.id)}">Válidas</label><input id="es-${esc(ex.id)}" data-edit="series" inputmode="numeric" value="${esc(ex.series)}"></div>
               <div class="field"><label class="label" for="er-${esc(ex.id)}">Reps</label><input id="er-${esc(ex.id)}" data-edit="reps" value="${esc(ex.reps)}"></div>
-              <div class="field"><label class="label" for="ed-${esc(ex.id)}">Descanso</label><select id="ed-${esc(ex.id)}" data-edit="descanso">${RESTS.concat(RESTS.includes(ex.descanso) ? [] : [ex.descanso]).map((r) => `<option${r === ex.descanso ? " selected" : ""}>${esc(r)}</option>`).join("")}</select></div>
+              <div class="field f-desc"><label class="label" for="ed-${esc(ex.id)}">Descanso das válidas</label><select id="ed-${esc(ex.id)}" data-edit="descanso">${RESTS.concat(RESTS.includes(ex.descanso) ? [] : [ex.descanso]).map((r) => `<option${r === ex.descanso ? " selected" : ""}>${esc(r)}</option>`).join("")}</select></div>
               <button class="x" data-act="del-ex" aria-label="Remover ${esc(exNome(ex))}">×</button>
             </div>
-            <details class="extra"><summary>Passos e cuidado${libOf(ex) ? " (já vêm da biblioteca)" : ""}</summary>
+            <div class="er-sum">${esc(doseTxt(ex))}</div>
+            <details class="extra"><summary>Mais opções: reps do aquecimento, passos e cuidado</summary>
+              <div class="grid2"><div class="field"><label class="label" for="eq-${esc(ex.id)}">Reps do aquecimento</label><input id="eq-${esc(ex.id)}" data-edit="repsAq" value="${esc(ex.repsAq || "")}" placeholder="${TIPOS.aquec.reps}"></div>
+              <div class="field"><label class="label" for="ew-${esc(ex.id)}">Reps da adaptação</label><input id="ew-${esc(ex.id)}" data-edit="repsAd" value="${esc(ex.repsAd || "")}" placeholder="${TIPOS.adapt.reps}"></div></div>
               <div class="field"><label class="label" for="eh-${esc(ex.id)}">Passos, um por linha</label><textarea id="eh-${esc(ex.id)}" data-edit="dicas" placeholder="${esc((libOf(ex)?.dicas || []).join("\n"))}">${esc((ex.dicas || []).join("\n"))}</textarea></div>
               <div class="field"><label class="label" for="ec-${esc(ex.id)}">Cuidado</label><input id="ec-${esc(ex.id)}" data-edit="cuidado" value="${esc(ex.cuidado || "")}" placeholder="${esc(libOf(ex)?.cuidado || "")}"></div>
             </details></div>`).join("")}
@@ -649,7 +677,7 @@ function startAdmin(S0, K0) {
     const musc = def ? (def.hl || []).map((h) => MUSC[h]).filter(Boolean) : [];
     const dicas = exDicas(ex), cuidado = exCuidado(ex);
     const q = "como fazer " + exNome(ex) + (pessoa()?.simples ? " idosos" : "");
-    $("#howPanel").innerHTML = `<div class="top"><div><h2 id="howTitle">${esc(exNome(ex))}</h2>${ex.series ? `<div class="sub">${esc(ex.series)} séries de ${esc(ex.reps)} · descanso ${esc(ex.descanso)}</div>` : ""}</div><button class="close" data-close="#howModal">Fechar</button></div>
+    $("#howPanel").innerHTML = `<div class="top"><div><h2 id="howTitle">${esc(exNome(ex))}</h2>${ex.series ? `<div class="sub">${esc(doseTxt(ex))} · descanso ${esc(ex.descanso)}</div>` : ""}</div><button class="close" data-close="#howModal">Fechar</button></div>
       <div class="stage"><canvas data-anim="${esc(a || "none")}"></canvas></div>
       <div class="tagrow">${lib ? `<span class="tag">${esc(lib.grupo)}</span>` : ""}${musc.length ? `<span class="musc"><i></i>${esc(musc.join(", "))}</span>` : ""}</div>
       ${dicas.length ? `<ol class="steps">${dicas.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>` : `<div class="sub">Sem passos cadastrados.</div>`}
@@ -808,9 +836,11 @@ function startAdmin(S0, K0) {
     if (kind === "tnome") { t.nome = el.value; savePessoa(p); return; }
     const ex = t.exercicios.find((x) => x.id === el.closest("[data-eid]").dataset.eid); if (!ex) return;
     if (kind === "series") ex.series = parseInt(el.value, 10) || "";
+    else if (kind === "aquec" || kind === "adapt") ex[kind] = nInt(el.value, 0, 4, 0);
     else if (kind === "dicas") ex.dicas = el.value.split("\n").map((s) => s.trim()).filter(Boolean);
     else ex[kind] = el.value;
     savePessoa(p);
+    if (["series", "aquec", "adapt", "reps"].includes(kind)) { const sm = el.closest(".erow")?.querySelector(".er-sum"); if (sm) sm.textContent = doseTxt(ex); }
   });
   document.addEventListener("change", (e) => {
     if ($("#admin").hidden) return;
@@ -875,8 +905,8 @@ function startAluno(S0, P) {
   const A = { p: null, sess: [], avals: [], screen: "home", tab: ls.get("al.tab." + P, "treino"), tIdx: null, exIdx: 0, marks: ls.get("al.marks." + P, {}), inputs: ls.get("al.inputs." + P, {}), loaded: false, savedOnce: false, err: null, calMonth: null };
   const lib = (ex) => LIB[ex.lib] || { nome: ex.nome || "Exercício", dicas: [], cuidado: "", anim: null };
   const exNome = (ex) => ex.nome || lib(ex).nome;
-  const dose = (ex) => `${ex.series} séries de ${ex.reps}${/^\d+(–\d+)?$/.test(String(ex.reps)) ? " vezes" : ""}`;
-  const nSetsOf = (ex) => Math.max(1, Math.min(6, parseInt(ex.series, 10) || 2));
+  const dose = (ex) => doseTxt(ex);
+  const nSetsOf = (ex) => planoSeries(ex).length;
   const simples = () => !!(A.p && A.p.simples);
   const nomeCurto = () => { const n = (A.p && A.p.nome) || ""; return n && !/^(pai|mãe|mae|eu)$/i.test(n) ? n.split(" ")[0] : ""; };
   let wake = null;
@@ -972,7 +1002,7 @@ function startAluno(S0, P) {
   function seusTreinos() {
     const tr = A.p.treinos || [];
     return `<div class="a-card"><p><b>Seus treinos</b></p>${tr.map((t, i) => `<details class="tr-det"><summary><span class="tr-dot" style="--pc:${plateVarG(i)}">${esc((t.nome.match(/\b([A-Z])$/) || [0, String.fromCharCode(65 + i)])[1])}</span><span class="tr-n">${esc(t.nome)}<small>${t.exercicios.length} exercícios</small></span></summary>
-      <ul class="a-list">${t.exercicios.map((ex, j) => { const l = lastFor(ex); return `<li><b>${j + 1}.</b><span style="flex:1">${esc(exNome(ex))}<br><small class="a-muted">${esc(ex.series)} × ${esc(ex.reps)}${l && l.carga != null ? " · última: " + fmtN(l.carga) + " kg" : ""}</small></span></li>`; }).join("")}</ul>
+      <ul class="a-list">${t.exercicios.map((ex, j) => { const l = lastFor(ex); return `<li><b>${j + 1}.</b><span style="flex:1">${esc(exNome(ex))}<br><small class="a-muted">${esc(doseTxt(ex))}${l && l.carga != null ? " · última: " + fmtN(l.carga) + " kg" : ""}</small></span></li>`; }).join("")}</ul>
       <button class="a-big soft" data-dostart="${i}">Fazer o ${esc(t.nome)} agora</button></details>`).join("")}</div>`;
   }
   function dayView(dt) {
@@ -986,7 +1016,7 @@ function startAluno(S0, P) {
       const t = k >= 0 ? tr[k] : null;
       if (!t) return `<section class="rest-card"><div class="kicker">${esc(x.momento || "")} · Musculação</div><div class="cc-t">Próximo treino da sequência</div><p class="a-muted" style="margin:0">O app escolhe o treino certo no dia, seguindo a ordem A, B, C.</p></section>`;
       return `<section class="plan-card" style="--pc:${plateVarG(k)}"><div class="kicker">${esc(x.momento || "")} · Musculação</div><div class="cc-t">${esc(t.nome)}</div>
-        <ul class="a-list">${t.exercicios.map((ex, j) => `<li><b>${j + 1}.</b><span>${esc(exNome(ex))} <small class="a-muted">${esc(ex.series)} × ${esc(ex.reps)}</small></span></li>`).join("")}</ul>
+        <ul class="a-list">${t.exercicios.map((ex, j) => `<li><b>${j + 1}.</b><span>${esc(exNome(ex))} <small class="a-muted">${esc(doseTxt(ex))}</small></span></li>`).join("")}</ul>
         ${feito.some((y) => !isCardio(y)) ? '<span class="cc-done">✓ Feito</span>' : `<button class="a-big soft" data-dostart="${k}">Fazer esse treino agora</button>`}</section>`;
     }).join("") : `<section class="rest-card"><div class="kicker">${DIAS[dow]}</div><div class="cc-t">Dia de descanso</div><p class="a-muted" style="margin:0">Nada planejado pra esse dia.</p></section>`;
     V().innerHTML = `
@@ -1048,7 +1078,7 @@ function startAluno(S0, P) {
       ${sem ? `<div class="label" style="margin-bottom:-8px">Hoje · ${DIAS[dow]}</div>` : ""}
       ${blocos}
       ${A.p.aviso ? `<div class="a-note">${esc(A.p.aviso)}</div>` : ""}
-      ${showTreino ? `<div class="a-card"><p><b>Exercícios do ${esc(t.nome)}</b></p><ul class="a-list">${t.exercicios.map((ex, i) => { const l = lastFor(ex); return `<li><b>${i + 1}.</b><span style="flex:1">${esc(exNome(ex))}<br><small class="a-muted">${esc(ex.series)} × ${esc(ex.reps)}${l && l.carga != null ? " · última: " + fmtN(l.carga) + " kg" : ""}</small></span></li>`; }).join("")}</ul></div>` : ""}
+      ${showTreino ? `<div class="a-card"><p><b>Exercícios do ${esc(t.nome)}</b></p><ul class="a-list">${t.exercicios.map((ex, i) => { const l = lastFor(ex); return `<li><b>${i + 1}.</b><span style="flex:1">${esc(exNome(ex))}<br><small class="a-muted">${esc(doseTxt(ex))}${l && l.carga != null ? " · última: " + fmtN(l.carga) + " kg" : ""}</small></span></li>`; }).join("")}</ul></div>` : ""}
       ${weekCard()}${proxDias()}${seusTreinos()}${offline}`;
   }
 
@@ -1109,23 +1139,35 @@ function startAluno(S0, P) {
 
   function exercise() {
     const t = A.p.treinos[A.tIdx], ex = t.exercicios[A.exIdx], L = lib(ex), n = t.exercicios.length;
-    const ns = nSetsOf(ex), m = A.marks[ex.id] || [], allDone = m.filter(Boolean).length >= ns;
+    const plano = planoSeries(ex), ns = plano.length, m = A.marks[ex.id] || [];
+    const allDone = plano.every((x, i) => x.tipo !== "valida" || m[i]);
     const dicas = Array.isArray(ex.dicas) && ex.dicas.length ? ex.dicas : L.dicas, cuidado = ex.cuidado || L.cuidado;
     const inp = A.inputs[ex.id] || {}, l = lastFor(ex), top = topReps(ex.reps);
     const sets = inp.sets || [];
     const lastSeries = (l && Array.isArray(l.series)) ? l.series : [];
-    const phKg = (i) => { for (let j = i - 1; j >= 0; j--) if (sets[j] && sets[j].kg) return sets[j].kg; if (lastSeries[i] && lastSeries[i].kg != null) return fmtN(lastSeries[i].kg); if (l && l.carga != null) return fmtN(l.carga); return ""; };
-    const phReps = (i) => { if (lastSeries[i] && lastSeries[i].reps != null) return String(lastSeries[i].reps); return top != null ? String(top) : ""; };
+    const lastBy = { aquec: [], adapt: [], valida: [] };
+    lastSeries.forEach((x) => (lastBy[x.tipo && lastBy[x.tipo] ? x.tipo : "valida"]).push(x));
+    const phKg = (i) => {
+      const pi = plano[i];
+      for (let j = i - 1; j >= 0; j--) if (plano[j].tipo === pi.tipo && sets[j] && sets[j].kg) return sets[j].kg;
+      const lb = lastBy[pi.tipo][pi.ord]; if (lb && lb.kg != null) return fmtN(lb.kg);
+      if (pi.tipo === "valida" && l && l.carga != null) return fmtN(l.carga);
+      return "";
+    };
+    const phReps = (i) => { const pi = plano[i], lb = lastBy[pi.tipo][pi.ord]; if (lb && lb.reps != null) return String(lb.reps); const tp = topReps(pi.reps); return tp != null ? String(tp) : ""; };
     const subir = !simples() && l && top && l.reps != null && l.reps >= top;
-    const lastTxt = l ? (lastSeries.length ? lastSeries.map((x) => `${x.kg != null ? fmtN(x.kg) : "—"}×${x.reps ?? "—"}`).join(" · ") : `${l.carga != null ? fmtN(l.carga) + " kg" : "—"} × ${l.reps ?? "—"}`) : "";
+    const lv = lastBy.valida;
+    const lastTxt = l ? (lv.length ? lv.map((x) => `${x.kg != null ? fmtN(x.kg) : "—"}×${x.reps ?? "—"}`).join(" · ") : `${l.carga != null ? fmtN(l.carga) + " kg" : "—"} × ${l.reps ?? "—"}`) : "";
+    const temTipos = plano.some((x) => x.tipo !== "valida");
     const setRows = simples() ? "" : `
       <div class="setrows">
         <div class="sethead"><span>Série</span><span>Carga (kg)</span><span>Reps</span><span></span></div>
-        ${Array.from({ length: ns }, (_, i) => { const st = sets[i] || {}; return `<div class="setrow${m[i] ? " done" : ""}">
-          <span class="sn">${i + 1}</span>
-          <input inputmode="decimal" aria-label="Carga da série ${i + 1}" data-skg="${i}" value="${esc(st.kg ?? "")}" placeholder="${esc(phKg(i))}">
-          <input inputmode="numeric" aria-label="Repetições da série ${i + 1}" data-sreps="${i}" value="${esc(st.reps ?? "")}" placeholder="${esc(phReps(i))}">
-          <button class="setok" data-set="${i}" aria-pressed="${!!m[i]}" aria-label="Série ${i + 1} feita">✓</button></div>`; }).join("")}
+        ${plano.map((pi, i) => { const st = sets[i] || {}; const tag = pi.tipo === "valida" ? String(pi.ord + 1) : TIPOS[pi.tipo].curto; return `<div class="setrow t-${pi.tipo}${m[i] ? " done" : ""}">
+          <span class="sn" title="${TIPOS[pi.tipo].nome}">${tag}</span>
+          <input inputmode="decimal" aria-label="Carga · ${TIPOS[pi.tipo].nome} ${pi.ord + 1}" data-skg="${i}" value="${esc(st.kg ?? "")}" placeholder="${esc(phKg(i))}">
+          <input inputmode="numeric" aria-label="Repetições · ${TIPOS[pi.tipo].nome} ${pi.ord + 1}" data-sreps="${i}" value="${esc(st.reps ?? "")}" placeholder="${esc(phReps(i))}">
+          <button class="setok" data-set="${i}" aria-pressed="${!!m[i]}" aria-label="${TIPOS[pi.tipo].nome} ${pi.ord + 1} feita">✓</button></div>`; }).join("")}
+        ${temTipos ? `<div class="setlegend">${plano.some((x) => x.tipo === "aquec") ? `<span><b class="lg aquec">AQ</b> Aquecimento · ${esc(ex.repsAq || TIPOS.aquec.reps)}, carga leve</span>` : ""}${plano.some((x) => x.tipo === "adapt") ? `<span><b class="lg adapt">AD</b> Adaptação · ${esc(ex.repsAd || TIPOS.adapt.reps)}, perto da carga de trabalho</span>` : ""}<span><b class="lg valida">1</b> Válidas · ${esc(ex.reps)}, pra valer</span></div>` : ""}
       </div>
       <p class="a-muted" style="font-size:.85em;margin:0">${l ? `Última vez (${fmtDate(l.data)}): <b>${lastTxt}</b>` : "Primeira vez: comece leve e anote"}${subir ? ' <span class="pill">Suba a carga</span>' : ""}</p>
       <div class="field obsfield"><label class="label" for="ai-obs">Observações</label>
@@ -1138,7 +1180,7 @@ function startAluno(S0, P) {
       <h2>${esc(exNome(ex))}</h2>
       <div class="a-stage"><canvas data-anim="${esc(L.anim || "none")}" aria-label="Boneco mostrando o movimento"></canvas></div>
       <p class="a-dose">${esc(dose(ex))} · descanso ${esc(ex.descanso)}</p>
-      ${simples() ? `<div class="a-sets">${Array.from({ length: ns }, (_, i) => `<button class="a-set" data-set="${i}" aria-pressed="${!!m[i]}">${m[i] ? "✓ Feita" : "Série " + (i + 1)}<small>${m[i] ? "muito bem" : "toque ao terminar"}</small></button>`).join("")}</div>` : ""}
+      ${simples() ? `<div class="a-sets${ns > 3 ? " many" : ""}">${plano.map((pi, i) => `<button class="a-set t-${pi.tipo}" data-set="${i}" aria-pressed="${!!m[i]}">${m[i] ? "✓ Feita" : pi.tipo === "valida" ? "Série " + (pi.ord + 1) : TIPOS[pi.tipo].nome}<small>${m[i] ? "muito bem" : esc(pi.reps) + (/^\d+(–\d+)?$/.test(String(pi.reps)) ? " vezes" : "")}</small></button>`).join("")}</div>` : ""}
       ${inputs}
       ${dicas.length ? `<details${A.exIdx === 0 && !ls.get("al.seen", false) ? " open" : ""}><summary>Como fazer</summary><ol class="a-steps">${dicas.map((d) => `<li>${esc(d)}</li>`).join("")}</ol></details>` : ""}
       ${cuidado ? `<div class="a-note"><b>Cuidado:</b> ${esc(cuidado)}</div>` : ""}
@@ -1151,9 +1193,11 @@ function startAluno(S0, P) {
     const t = A.p.treinos[A.tIdx];
     const itens = {}; let feitas = 0;
     t.exercicios.forEach((ex) => {
-      const mk = A.marks[ex.id] || [], c = mk.filter(Boolean).length, inp = A.inputs[ex.id] || {};
-      const series = (inp.sets || []).map((x, i) => ({ kg: num(x && x.kg), reps: (x && num(x.reps)) == null ? null : Math.round(num(x.reps)), ok: !!mk[i] })).filter((x) => x.kg != null || x.reps != null || x.ok);
-      const kgs = series.map((x) => x.kg).filter((v) => v != null), withReps = series.filter((x) => x.reps != null);
+      const mk = A.marks[ex.id] || [], inp = A.inputs[ex.id] || {}, pl = planoSeries(ex);
+      const c = pl.filter((x, i) => x.tipo === "valida" && mk[i]).length || mk.filter(Boolean).length;
+      const series = pl.map((p, i) => { const x = (inp.sets || [])[i]; return { tipo: p.tipo, kg: num(x && x.kg), reps: (x && num(x.reps)) == null ? null : Math.round(num(x.reps)), ok: !!mk[i] }; }).filter((x) => x.kg != null || x.reps != null || x.ok);
+      const vals = series.filter((x) => x.tipo === "valida"), base = vals.length ? vals : series;
+      const kgs = base.map((x) => x.kg).filter((v) => v != null), withReps = base.filter((x) => x.reps != null);
       const carga = kgs.length ? Math.max(...kgs) : num(inp.carga), reps = withReps.length ? withReps[withReps.length - 1].reps : (num(inp.reps) == null ? null : Math.round(num(inp.reps)));
       const obs = (inp.obs || "").trim();
       if (c || carga != null || reps != null || obs) {
@@ -1262,7 +1306,8 @@ function startAluno(S0, P) {
         ls.set("al.inputs." + P, A.inputs);
       }
       const done = m.filter(Boolean).length;
-      exercise(); if (m[i] && done < nSetsOf(ex)) rest(restSecs(ex.descanso));
+      const pl = planoSeries(ex);
+      exercise(); if (m[i] && pl.some((_, k) => !m[k])) rest(restSecs(pl[i] && pl[i].tipo !== "valida" ? TIPOS[pl[i].tipo].rest : ex.descanso));
       return;
     }
     const go = b.dataset.go; if (!go) return;
