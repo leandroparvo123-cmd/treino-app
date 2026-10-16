@@ -73,7 +73,7 @@ async function firebaseBackend(S) {
   const [{ initializeApp }, F, A] = await Promise.all([import(FB + "firebase-app.js"), import(FB + "firebase-firestore.js"), import(FB + "firebase-auth.js")]);
   const app = initializeApp(firebaseConfig);
   let db;
-  try { db = F.initializeFirestore(app, { localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) }); }
+  try { db = F.initializeFirestore(app, { ignoreUndefinedProperties: true, localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) }); }
   catch (e) { db = F.getFirestore(app); }
   const auth = A.getAuth(app);
   const user = await new Promise((res, rej) => {
@@ -597,7 +597,7 @@ function startAdmin(S0, K0) {
   const saveTimers = {};
   function savePessoa(p, now) {
     clearTimeout(saveTimers[p.id]);
-    const go = () => B.set("pessoas", p.id, { nome: p.nome, ordem: p.ordem || 0, simples: !!p.simples, aviso: p.aviso || "", ficha: p.ficha || {}, semana: p.semana || {}, treinos: p.treinos || [] }).catch(writeErr);
+    const go = () => { try { return B.set("pessoas", p.id, JSON.parse(JSON.stringify({ nome: p.nome || "", ordem: p.ordem || 0, simples: !!p.simples, aviso: p.aviso || "", ficha: p.ficha || {}, semana: p.semana || {}, treinos: p.treinos || [] }))).catch(writeErr); } catch (e) { writeErr(e); } };
     if (now) return go();
     saveTimers[p.id] = setTimeout(go, 700);
   }
