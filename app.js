@@ -341,6 +341,65 @@ const MODELOS = {
     6: [{ tipo: "cardio", nome: "Cardio leve", min: 20, momento: "Livre" }],
   } },
 };
+// ============================================================
+//  Fichas prontas (treinos + semana) que o personal aplica com um toque
+// ============================================================
+const E = (lib, aquec, adapt, series, reps, descanso, nome) => ({ lib, aquec, adapt, series, reps, descanso, ...(nome ? { nome } : {}) });
+const FICHAS = {
+  fullmaq: {
+    nome: "Fullbody máquinas · 5x + bike",
+    desc: "3 treinos que se revezam (A, B, C), perna sempre no começo. 1 aquecimento, 1 ajuste e 2 válidas nos exercícios grandes.",
+    objetivo: "Secar ganhando massa",
+    obs: "Válidas pra valer: termine com 1 a 2 repetições sobrando no máximo. Bateu o topo das reps nas 2 válidas, sobe a carga na próxima. Perna é sempre o 1º exercício: fez a perna, o resto é tranquilo.",
+    semanas: 8,
+    treinos: [
+      { nome: "Treino A · Empurrar + quadríceps", ex: [
+        E("legpress", 1, 1, 2, "8–12", "2 min"),
+        E("supinomaq", 1, 1, 2, "8–12", "2 min"),
+        E("puxada", 0, 1, 2, "8–12", "90s"),
+        E("desenvolvimento", 0, 1, 2, "8–12", "90s", "Desenvolvimento na máquina"),
+        E("flexora", 0, 1, 2, "10–15", "90s"),
+        E("triceps", 0, 0, 2, "10–15", "60s"),
+        E("rosca", 0, 0, 2, "10–15", "60s", "Rosca na máquina (ou Scott)"),
+      ] },
+      { nome: "Treino B · Puxar + posterior", ex: [
+        E("mesaflexora", 1, 1, 2, "8–12", "2 min"),
+        E("remadamaq", 1, 1, 2, "8–12", "2 min"),
+        E("supinomaq", 0, 1, 2, "10–15", "90s", "Voador (crucifixo na máquina)"),
+        E("elevacao", 0, 0, 2, "12–15", "60s", "Elevação lateral (máquina ou halter)"),
+        E("extensora", 0, 1, 2, "10–15", "90s"),
+        E("roscasentado", 0, 0, 2, "10–12", "60s"),
+        E("triceps", 0, 0, 2, "10–15", "60s", "Tríceps francês na polia (ou máquina)"),
+      ] },
+      { nome: "Treino C · Pernas + completo", ex: [
+        E("agachamento", 1, 1, 2, "8–12", "2 min", "Agachamento no hack (ou Smith)"),
+        E("supinoinc", 0, 1, 2, "8–12", "2 min", "Supino inclinado na máquina"),
+        E("remadabaixa", 0, 1, 2, "8–12", "90s"),
+        E("facepull", 0, 0, 2, "12–15", "60s", "Crucifixo inverso na máquina"),
+        E("panturrilha", 0, 0, 2, "12–15", "60s", "Panturrilha na máquina"),
+        E("abdpolia", 0, 0, 2, "10–15", "60s"),
+      ] },
+    ],
+    semana: {
+      0: [{ tipo: "cardio", nome: "Bike leve (ou descanso)", min: 30, momento: "Livre" }],
+      1: [{ tipo: "cardio", nome: "Bike moderada", min: 30, momento: "Almoço" }, { tipo: "treino", idx: "auto", momento: "Noite" }],
+      2: [{ tipo: "treino", idx: "auto", momento: "Noite" }],
+      3: [{ tipo: "cardio", nome: "Bike leve", min: 30, momento: "Almoço" }, { tipo: "treino", idx: "auto", momento: "Noite" }],
+      4: [{ tipo: "cardio", nome: "Bike intervalada", min: 20, momento: "Almoço" }],
+      5: [{ tipo: "cardio", nome: "Bike moderada", min: 30, momento: "Almoço" }, { tipo: "treino", idx: "auto", momento: "Noite" }],
+      6: [{ tipo: "treino", idx: "auto", momento: "Livre" }, { tipo: "cardio", nome: "Bike leve", min: 30, momento: "Livre" }],
+    },
+  },
+};
+function aplicarFicha(p, key) {
+  const F = FICHAS[key]; if (!F) return;
+  p.treinos = F.treinos.map((t) => ({ id: rnd(8), nome: t.nome, exercicios: t.ex.map((e) => ({ id: rnd(8), ...e })) }));
+  p.semana = {};
+  for (let d = 0; d < 7; d++) p.semana[d] = (F.semana[d] || []).map((it) => it.tipo === "cardio" ? { id: rnd(6), tipo: "cardio", nome: it.nome, min: it.min, momento: it.momento } : { id: rnd(6), tipo: "treino", treinoId: it.idx === "auto" ? "auto" : p.treinos[it.idx].id, momento: it.momento });
+  const ini = todayISO();
+  p.ficha = { ...(p.ficha || {}), objetivo: (p.ficha && p.ficha.objetivo) || F.objetivo, inicio: ini, troca: plusDays(ini, 7 * F.semanas), obs: F.obs };
+}
+
 function semanaDoModelo(key, treinos) {
   const m = MODELOS[key], out = {};
   for (let d = 0; d < 7; d++) out[d] = (m.dias[d] || []).map((it) => {
@@ -660,6 +719,10 @@ function startAdmin(S0, K0) {
       ${weekEditor(p)}
       ${cards || `<div class="empty"><b>Nenhum treino ainda</b>Crie do zero ou copie os treinos de outra pessoa e ajuste.</div>`}
       <button class="btn ghost" data-act="add-treino">+ Novo treino</button>
+      <details class="sheet fichas"><summary><b>Fichas prontas</b><span>Troca os treinos e a semana de ${esc(p.nome)}</span></summary>
+        ${Object.entries(FICHAS).map(([k, F]) => `<div class="fpr"><div><b>${esc(F.nome)}</b><p>${esc(F.desc)}</p><p class="fpr-l">${F.treinos.map((t) => esc(t.nome)).join(" · ")}</p></div><button class="btn sm" data-act="ficha-pronta" data-f="${k}" data-arm="fp-${k}">Usar esta ficha</button></div>`).join("")}
+        <p class="hint">O histórico de cargas continua guardado.</p>
+      </details>
       ${others.length ? `<div class="sheet"><div class="label">Copiar de outra pessoa</div><div class="row">${others.map((o) => `<button class="btn ghost" data-act="copy-from" data-from="${esc(o.id)}">Copiar de ${esc(o.nome)}</button>`).join("")}</div></div>` : ""}
       <div class="sheet">
         <div class="field"><label class="label" for="pn-aviso">Recado no início do treino</label><input id="pn-aviso" class="txt" data-edit="aviso" value="${esc(p.aviso || "")}" placeholder="Ex.: Beba água e pare se sentir tontura"></div>
@@ -791,6 +854,7 @@ function startAdmin(S0, K0) {
       else { const iid = b.closest("[data-iid]").dataset.iid; p.semana[d] = lst.filter((x) => x.id !== iid); }
       savePessoa(p, true); render(); return;
     }
+    if (act === "ficha-pronta") { if (!arm(b, "Toque de novo pra trocar os treinos")) return; aplicarFicha(p, b.dataset.f); S.chipEd = null; savePessoa(p, true); render(); toast("Ficha aplicada"); window.scrollTo(0, 0); return; }
     if (act === "sem-tpl") { if (!arm(b, "Toque de novo pra trocar a semana")) return; p.semana = semanaDoModelo(b.dataset.tpl, p.treinos || []); savePessoa(p, true); render(); toast("Semana atualizada"); return; }
     if (act === "sem-clear") { if (!arm(b, "Toque de novo pra limpar")) return; p.semana = {}; savePessoa(p, true); render(); return; }
     if (act === "add-treino") { p.treinos = p.treinos || []; p.treinos.push({ id: rnd(8), nome: "Treino " + String.fromCharCode(65 + p.treinos.length), exercicios: [] }); savePessoa(p, true); render(); return; }
