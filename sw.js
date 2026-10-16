@@ -1,5 +1,5 @@
 // Guarda os arquivos do app no celular pra ele abrir mesmo com internet fraca.
-const CACHE = "treino-v23";
+const CACHE = "treino-v24";
 const CORE = ["./", "index.html", "app.js", "fig.js", "seed.js", "config.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-180.png"];
 
 self.addEventListener("install", (e) => {

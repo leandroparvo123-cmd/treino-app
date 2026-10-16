@@ -819,6 +819,18 @@ html.sport.light .setrow.t-valida .sn { color: var(--ink); }
 .cg-more > summary { cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--cardio); padding: 4px 2px 8px; list-style: none; }
 .cg-more > summary::-webkit-details-marker { display: none; }
 .cg-more > summary::before { content: "▸ "; } .cg-more[open] > summary::before { content: "▾ "; }
+
+/* ---------- troca de exercício (máquina ocupada) ---------- */
+.swapbtn { width: 100%; padding: 12px; border: 1px dashed var(--line); border-radius: 3px; background: transparent; color: var(--ink); font-weight: 700; font-size: 14.5px; }
+.swapbtn::before { content: "⇄  "; color: var(--accent); font-weight: 900; }
+.swapbox { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 3px; background: var(--surface); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.sw-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14.5px; }
+.sw-opt { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; text-align: left; padding: 6px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface-2); color: var(--ink); font-weight: 750; font-size: 15.5px; }
+.sw-opt canvas { width: 64px; height: 48px; background: var(--surface); border-radius: 2px; }
+.sw-opt small { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+.sw-opt:active { border-color: var(--accent); }
+.swapbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 10px 12px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid var(--accent); font-size: 14px; }
+.swapbar .a-link { padding: 0; font-size: 13.5px; }
 </style>
 </head>
 <body>

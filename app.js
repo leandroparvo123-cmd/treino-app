@@ -342,6 +342,53 @@ const MODELOS = {
   } },
 };
 // ============================================================
+//  Trocas: opções com o mesmo foco, pra quando a máquina está ocupada
+// ============================================================
+const A_ = (lib, nome) => ({ lib, ...(nome ? { nome } : {}) });
+const ALT_DEF = {
+  legpress: [A_("agachamento", "Agachamento no hack"), A_("agachamento", "Agachamento no Smith")],
+  agachamento: [A_("legpress"), A_("agachamento", "Agachamento no Smith")],
+  extensora: [A_("legpress", "Leg press com pés baixos"), A_("agachamento", "Agachamento no hack")],
+  flexora: [A_("mesaflexora"), A_("stiff")],
+  mesaflexora: [A_("flexora"), A_("stiff")],
+  stiff: [A_("mesaflexora"), A_("terra")],
+  terra: [A_("stiff"), A_("mesaflexora")],
+  afundo: [A_("legpress"), A_("agachamento", "Agachamento no Smith")],
+  panturrilha: [A_("panturrilha", "Panturrilha no leg press"), A_("panturrilha", "Panturrilha sentado")],
+  abdutora: [A_("abdutora", "Abdução na polia")],
+  supinomaq: [A_("supino", "Supino com halteres"), A_("supinomaq", "Crossover na polia")],
+  supino: [A_("supinomaq"), A_("supino", "Supino com halteres")],
+  supinoinc: [A_("supinomaq", "Supino inclinado na máquina"), A_("supinoinc", "Supino inclinado no Smith")],
+  puxada: [A_("puxada", "Puxada com triângulo"), A_("remadamaq", "Puxada articulada")],
+  remadamaq: [A_("remadabaixa"), A_("remadauni")],
+  remadabaixa: [A_("remadamaq"), A_("remadauni")],
+  remadauni: [A_("remadabaixa"), A_("remadamaq")],
+  desenvolvimento: [A_("desenvolvimento", "Desenvolvimento com halteres"), A_("desenvolvimento", "Desenvolvimento no Smith")],
+  elevacao: [A_("elevacao", "Elevação lateral na polia"), A_("elevacao", "Elevação lateral com halteres")],
+  facepull: [A_("facepull", "Crucifixo inverso com halteres"), A_("facepull")],
+  rosca: [A_("roscasentado"), A_("rosca", "Rosca na polia")],
+  roscasentado: [A_("rosca"), A_("rosca", "Rosca na polia")],
+  triceps: [A_("triceps", "Tríceps na máquina"), A_("triceps", "Tríceps francês com halter")],
+  abdpolia: [A_("prancha"), A_("abdpolia", "Abdominal na máquina")],
+  prancha: [A_("abdpolia")],
+  sentar: [A_("legpress")],
+};
+const _libs = () => (typeof window !== "undefined" && window.FIG && window.FIG.LIB) || {};
+const _norm = (x) => String(x || "").trim().toLowerCase();
+function altNome(a) { return a.nome || (_libs()[a.lib] && _libs()[a.lib].nome) || "Exercício"; }
+function libDoNome(nome, fallback) {
+  const n = _norm(nome), L = _libs();
+  for (const k in L) if (_norm(L[k].nome) === n) return k;
+  for (const k in ALT_DEF) for (const a of ALT_DEF[k]) if (a.nome && _norm(a.nome) === n) return a.lib;
+  return fallback;
+}
+function altsDe(ex, nomeAtual) {
+  const base = Array.isArray(ex.alts) && ex.alts.length ? ex.alts.map((n) => ({ nome: String(n).trim(), lib: libDoNome(n, ex.lib) })).filter((a) => a.nome) : (ALT_DEF[ex.lib] || []);
+  const cur = _norm(nomeAtual);
+  return base.filter((a) => _norm(altNome(a)) !== cur).slice(0, 4);
+}
+
+// ============================================================
 //  Intensidade do cardio: o que é leve, moderado e intervalado
 // ============================================================
 const CARDIO_NIVEIS = {
@@ -385,7 +432,7 @@ function cardioGuia(it) {
 // ============================================================
 //  Fichas prontas (treinos + semana) que o personal aplica com um toque
 // ============================================================
-const E = (lib, aquec, adapt, series, reps, descanso, nome) => ({ lib, aquec, adapt, series, reps, descanso, ...(nome ? { nome } : {}) });
+const E = (lib, aquec, adapt, series, reps, descanso, nome, alts) => ({ lib, aquec, adapt, series, reps, descanso, ...(nome ? { nome } : {}), ...(alts ? { alts } : {}) });
 const FICHAS = {
   fullmaq: {
     nome: "Fullbody máquinas · 5x + bike",
@@ -398,26 +445,26 @@ const FICHAS = {
         E("legpress", 1, 1, 2, "8–12", "2 min"),
         E("supinomaq", 1, 1, 2, "8–12", "2 min"),
         E("puxada", 0, 1, 2, "8–12", "90s"),
-        E("desenvolvimento", 0, 1, 2, "8–12", "90s", "Desenvolvimento na máquina"),
+        E("desenvolvimento", 0, 1, 2, "8–12", "90s", "Desenvolvimento na máquina", ["Desenvolvimento com halteres", "Desenvolvimento no Smith"]),
         E("flexora", 0, 1, 2, "10–15", "90s"),
         E("triceps", 0, 0, 2, "10–15", "60s"),
-        E("rosca", 0, 0, 2, "10–15", "60s", "Rosca na máquina (ou Scott)"),
+        E("rosca", 0, 0, 2, "10–15", "60s", "Rosca na máquina (ou Scott)", ["Rosca na polia", "Rosca com halteres sentado"]),
       ] },
       { nome: "Treino B · Puxar + posterior", ex: [
         E("mesaflexora", 1, 1, 2, "8–12", "2 min"),
         E("remadamaq", 1, 1, 2, "8–12", "2 min"),
-        E("supinomaq", 0, 1, 2, "10–15", "90s", "Voador (crucifixo na máquina)"),
-        E("elevacao", 0, 0, 2, "12–15", "60s", "Elevação lateral (máquina ou halter)"),
+        E("supinomaq", 0, 1, 2, "10–15", "90s", "Voador (crucifixo na máquina)", ["Crossover na polia", "Crucifixo com halteres"]),
+        E("elevacao", 0, 0, 2, "12–15", "60s", "Elevação lateral (máquina ou halter)", ["Elevação lateral na polia", "Elevação lateral com halteres"]),
         E("extensora", 0, 1, 2, "10–15", "90s"),
         E("roscasentado", 0, 0, 2, "10–12", "60s"),
-        E("triceps", 0, 0, 2, "10–15", "60s", "Tríceps francês na polia (ou máquina)"),
+        E("triceps", 0, 0, 2, "10–15", "60s", "Tríceps francês na polia (ou máquina)", ["Tríceps na máquina", "Tríceps na polia"]),
       ] },
       { nome: "Treino C · Pernas + completo", ex: [
-        E("agachamento", 1, 1, 2, "8–12", "2 min", "Agachamento no hack (ou Smith)"),
-        E("supinoinc", 0, 1, 2, "8–12", "2 min", "Supino inclinado na máquina"),
+        E("agachamento", 1, 1, 2, "8–12", "2 min", "Agachamento no hack (ou Smith)", ["Leg press", "Agachamento no Smith"]),
+        E("supinoinc", 0, 1, 2, "8–12", "2 min", "Supino inclinado na máquina", ["Supino inclinado com halteres", "Supino inclinado no Smith"]),
         E("remadabaixa", 0, 1, 2, "8–12", "90s"),
-        E("facepull", 0, 0, 2, "12–15", "60s", "Crucifixo inverso na máquina"),
-        E("panturrilha", 0, 0, 2, "12–15", "60s", "Panturrilha na máquina"),
+        E("facepull", 0, 0, 2, "12–15", "60s", "Crucifixo inverso na máquina", ["Crucifixo inverso com halteres", "Face pull"]),
+        E("panturrilha", 0, 0, 2, "12–15", "60s", "Panturrilha na máquina", ["Panturrilha no leg press", "Panturrilha em pé com apoio"]),
         E("abdpolia", 0, 0, 2, "10–15", "60s"),
       ] },
     ],
@@ -735,7 +782,8 @@ function startAdmin(S0, K0) {
               <button class="x" data-act="del-ex" aria-label="Remover ${esc(exNome(ex))}">×</button>
             </div>
             <div class="er-sum">${esc(doseTxt(ex))}</div>
-            <details class="extra"><summary>Mais opções: reps do aquecimento, passos e cuidado</summary>
+            <details class="extra"><summary>Mais opções: trocas, reps do aquecimento, passos e cuidado</summary>
+              <div class="field"><label class="label" for="ex-alt-${esc(ex.id)}">Trocas se a máquina estiver ocupada (uma por linha)</label><textarea id="ex-alt-${esc(ex.id)}" rows="2" data-edit="alts" placeholder="${esc(altsDe({ lib: ex.lib }, exNome(ex)).map(altNome).join("\n") || "Ex.: Supino com halteres")}">${esc((ex.alts || []).join("\n"))}</textarea><p class="hint" style="margin:4px 0 0">${(ex.alts && ex.alts.length) ? "O aluno vê estas opções." : altsDe({ lib: ex.lib }, exNome(ex)).length ? "Vazio: o aluno vê as sugestões do app (em cinza acima)." : "Sem sugestões pra este exercício. Escreva as suas."}</p></div>
               <div class="grid2"><div class="field"><label class="label" for="eq-${esc(ex.id)}">Reps do aquecimento</label><input id="eq-${esc(ex.id)}" data-edit="repsAq" value="${esc(ex.repsAq || "")}" placeholder="${TIPOS.aquec.reps}"></div>
               <div class="field"><label class="label" for="ew-${esc(ex.id)}">Reps da adaptação</label><input id="ew-${esc(ex.id)}" data-edit="repsAd" value="${esc(ex.repsAd || "")}" placeholder="${TIPOS.adapt.reps}"></div></div>
               <div class="field"><label class="label" for="eh-${esc(ex.id)}">Passos, um por linha</label><textarea id="eh-${esc(ex.id)}" data-edit="dicas" placeholder="${esc((libOf(ex)?.dicas || []).join("\n"))}">${esc((ex.dicas || []).join("\n"))}</textarea></div>
@@ -1035,6 +1083,7 @@ function startAdmin(S0, K0) {
     if (kind === "series") ex.series = parseInt(el.value, 10) || "";
     else if (kind === "aquec" || kind === "adapt") ex[kind] = nInt(el.value, 0, 4, 0);
     else if (kind === "dicas") ex.dicas = el.value.split("\n").map((s) => s.trim()).filter(Boolean);
+    else if (kind === "alts") ex.alts = el.value.split("\n").map((s) => s.trim()).filter(Boolean);
     else ex[kind] = el.value;
     savePessoa(p);
     if (["series", "aquec", "adapt", "reps"].includes(kind)) { const sm = el.closest(".erow")?.querySelector(".er-sum"); if (sm) sm.textContent = doseTxt(ex); }
@@ -1099,8 +1148,16 @@ function vibrate() { try { navigator.vibrate && navigator.vibrate([250, 120, 250
 function startAluno(S0, P) {
   show("#aluno");
   maxDpr = 1.5; frameGap = 40;
-  const A = { p: null, sess: [], avals: [], screen: "home", tab: ls.get("al.tab." + P, "treino"), tIdx: null, exIdx: 0, marks: ls.get("al.marks." + P, {}), inputs: ls.get("al.inputs." + P, {}), loaded: false, savedOnce: false, err: null, calMonth: null };
+  const A = { p: null, sess: [], avals: [], screen: "home", tab: ls.get("al.tab." + P, "treino"), tIdx: null, exIdx: 0, marks: ls.get("al.marks." + P, {}), inputs: ls.get("al.inputs." + P, {}), swap: ls.get("al.swap." + P, {}), loaded: false, savedOnce: false, err: null, calMonth: null };
   const lib = (ex) => LIB[ex.lib] || { nome: ex.nome || "Exercício", dicas: [], cuidado: "", anim: null };
+  // exercício que vale hoje: o original ou a troca escolhida (com histórico próprio)
+  function curEx(ex) {
+    const k = A.swap && A.swap[ex.id]; if (k == null) return ex;
+    const a = altsDe(ex, ex.nome || lib(ex).nome)[k]; if (!a) return ex;
+    const nm = altNome(a), slug = _norm(nm).normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const { dicas, cuidado, alts, ...rest } = ex;
+    return { ...rest, id: ex.id + "@" + slug, lib: a.lib, nome: nm, troca: ex.id, original: ex.nome || lib(ex).nome };
+  }
   const exNome = (ex) => ex.nome || lib(ex).nome;
   const dose = (ex) => doseTxt(ex);
   const nSetsOf = (ex) => planoSeries(ex).length;
@@ -1337,8 +1394,15 @@ function startAluno(S0, P) {
   }
 
   function exercise() {
-    const t = A.p.treinos[A.tIdx], ex = t.exercicios[A.exIdx], L = lib(ex), n = t.exercicios.length;
+    const t = A.p.treinos[A.tIdx], ex0 = t.exercicios[A.exIdx], ex = curEx(ex0), L = lib(ex), n = t.exercicios.length;
     const plano = planoSeries(ex), ns = plano.length, m = A.marks[ex.id] || [];
+    const alts = altsDe(ex0, ex0.nome || lib(ex0).nome), sw = A.swap[ex0.id];
+    const trocaHtml = ex.troca
+      ? `<div class="swapbar on"><span>Trocado hoje: <b>${esc(ex.nome)}</b> no lugar de ${esc(ex.original)}</span><button class="a-link" data-swap="off">Voltar pro original</button></div>`
+      : alts.length ? (A.swapOpen ? `<div class="swapbox"><div class="sw-h"><b>Máquina ocupada? Faça uma destas</b><button class="a-link" data-swap="close">Fechar</button></div>
+          ${alts.map((a, k) => `<button class="sw-opt" data-swap="${k}"><canvas data-anim="${esc((LIB[a.lib] && LIB[a.lib].anim) || "none")}" aria-hidden="true"></canvas><span>${esc(altNome(a))}<small>mesmo foco · carga anotada separada</small></span></button>`).join("")}
+          <p class="a-muted" style="font-size:.8em;margin:0">Vale só pra hoje. No próximo treino volta o original.</p></div>`
+        : `<button class="swapbtn" data-swap="open">Máquina ocupada? Trocar exercício</button>`) : "";
     const allDone = plano.every((x, i) => x.tipo !== "valida" || m[i]);
     const dicas = Array.isArray(ex.dicas) && ex.dicas.length ? ex.dicas : L.dicas, cuidado = ex.cuidado || L.cuidado;
     const inp = A.inputs[ex.id] || {}, l = lastFor(ex), top = topReps(ex.reps);
@@ -1379,6 +1443,7 @@ function startAluno(S0, P) {
       <h2>${esc(exNome(ex))}</h2>
       <div class="a-stage"><canvas data-anim="${esc(L.anim || "none")}" aria-label="Boneco mostrando o movimento"></canvas></div>
       <p class="a-dose">${esc(dose(ex))} · descanso ${esc(ex.descanso)}</p>
+      ${trocaHtml}
       ${simples() ? `<div class="a-sets${ns > 3 ? " many" : ""}">${plano.map((pi, i) => `<button class="a-set t-${pi.tipo}" data-set="${i}" aria-pressed="${!!m[i]}">${m[i] ? "✓ Feita" : pi.tipo === "valida" ? "Série " + (pi.ord + 1) : TIPOS[pi.tipo].nome}<small>${m[i] ? "muito bem" : esc(pi.reps) + (/^\d+(–\d+)?$/.test(String(pi.reps)) ? " vezes" : "")}</small></button>`).join("")}</div>` : ""}
       ${inputs}
       ${dicas.length ? `<details${A.exIdx === 0 && !ls.get("al.seen", false) ? " open" : ""}><summary>Como fazer</summary><ol class="a-steps">${dicas.map((d) => `<li>${esc(d)}</li>`).join("")}</ol></details>` : ""}
@@ -1391,7 +1456,7 @@ function startAluno(S0, P) {
   function finish() {
     const t = A.p.treinos[A.tIdx];
     const itens = {}; let feitas = 0;
-    t.exercicios.forEach((ex) => {
+    t.exercicios.map(curEx).forEach((ex) => {
       const mk = A.marks[ex.id] || [], inp = A.inputs[ex.id] || {}, pl = planoSeries(ex);
       const c = pl.filter((x, i) => x.tipo === "valida" && mk[i]).length || mk.filter(Boolean).length;
       const series = pl.map((p, i) => { const x = (inp.sets || [])[i]; return { tipo: p.tipo, kg: num(x && x.kg), reps: (x && num(x.reps)) == null ? null : Math.round(num(x.reps)), ok: !!mk[i] }; }).filter((x) => x.kg != null || x.reps != null || x.ok);
@@ -1403,6 +1468,7 @@ function startAluno(S0, P) {
         itens[ex.id] = { nome: exNome(ex), carga, reps, feitas: c };
         if (series.length) itens[ex.id].series = series;
         if (obs) itens[ex.id].obs = obs;
+        if (ex.troca) itens[ex.id].trocaDe = ex.original;
         feitas += c;
       }
     });
@@ -1462,7 +1528,7 @@ function startAluno(S0, P) {
     if ($("#aluno").hidden || A.screen !== "ex") return;
     const el = e.target, ds = el.dataset;
     if (ds.skg == null && ds.sreps == null && !("aobs" in ds)) return;
-    const ex = A.p.treinos[A.tIdx].exercicios[A.exIdx];
+    const ex = curEx(A.p.treinos[A.tIdx].exercicios[A.exIdx]);
     const d = (A.inputs[ex.id] = A.inputs[ex.id] || {}); d.sets = d.sets || [];
     if ("aobs" in ds) d.obs = el.value;
     else {
@@ -1484,7 +1550,7 @@ function startAluno(S0, P) {
     if (b.dataset.acal) { A.calMonth = shiftMonth(A.calMonth, b.dataset.acal === "next" ? 1 : -1); render(); return; }
     if (b.dataset.apick != null) { A.tIdx = +b.dataset.apick; render(); return; }
     if (b.dataset.wday) { A.selDate = b.dataset.wday === todayISO() ? null : b.dataset.wday; window.scrollTo(0, 0); render(); return; }
-    if (b.dataset.dostart != null) { A.tIdx = +b.dataset.dostart; A.selDate = null; A.screen = "ex"; A.exIdx = 0; A.marks = {}; A.inputs = {}; A.savedOnce = false; ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); keepAwake(); render(); return; }
+    if (b.dataset.dostart != null) { A.tIdx = +b.dataset.dostart; A.selDate = null; A.screen = "ex"; A.exIdx = 0; A.marks = {}; A.inputs = {}; A.swap = {}; ls.set("al.swap." + P, {}); A.savedOnce = false; ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); keepAwake(); render(); return; }
     if (b.dataset.cardio) {
       const it = diaDe(A.p, new Date().getDay()).find((x) => x.id === b.dataset.cardio) || { id: b.dataset.cardio, nome: "Cardio" };
       A.cardio = it; A.cInt = null;
@@ -1493,8 +1559,15 @@ function startAluno(S0, P) {
     }
     if (b.dataset.cint) { A.cInt = b.dataset.cint; document.querySelectorAll("[data-cint]").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false")); return; }
     const t = A.p && A.p.treinos[A.tIdx];
+    if (b.dataset.swap != null && t) {
+      const v = b.dataset.swap, ex0 = t.exercicios[A.exIdx];
+      if (v === "open") A.swapOpen = true; else if (v === "close") A.swapOpen = false;
+      else if (v === "off") { delete A.swap[ex0.id]; A.swapOpen = false; }
+      else { A.swap[ex0.id] = +v; A.swapOpen = false; toast("Trocado só por hoje"); }
+      ls.set("al.swap." + P, A.swap); exercise(); return;
+    }
     if (b.dataset.set != null) {
-      const ex = t.exercicios[A.exIdx], m = (A.marks[ex.id] = A.marks[ex.id] || []), i = +b.dataset.set;
+      const ex = curEx(t.exercicios[A.exIdx]), m = (A.marks[ex.id] = A.marks[ex.id] || []), i = +b.dataset.set;
       m[i] = !m[i]; ls.set("al.marks." + P, A.marks);
       if (m[i] && !simples()) {
         const d = (A.inputs[ex.id] = A.inputs[ex.id] || {}); d.sets = d.sets || []; d.sets[i] = d.sets[i] || {};
@@ -1513,12 +1586,12 @@ function startAluno(S0, P) {
     if (go === "today") { A.selDate = null; window.scrollTo(0, 0); render(); return; }
     if (go === "force") { A.forceTreino = true; A.tIdx = null; render(); return; }
     if (go === "save-cardio") { saveCardio(false); return; }
-    if (go === "start") { A.screen = "ex"; A.exIdx = 0; A.marks = {}; A.inputs = {}; A.savedOnce = false; ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); keepAwake(); render(); }
+    if (go === "start") { A.screen = "ex"; A.exIdx = 0; A.marks = {}; A.inputs = {}; A.swap = {}; ls.set("al.swap." + P, {}); A.savedOnce = false; ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); keepAwake(); render(); }
     else if (go === "swap") { A.tIdx = (A.tIdx + 1) % A.p.treinos.length; render(); }
-    else if (go === "next") { if (A.exIdx < t.exercicios.length - 1) { A.exIdx++; render(); } else { A.screen = "end"; render(); } }
-    else if (go === "prev") { A.exIdx = Math.max(0, A.exIdx - 1); render(); }
+    else if (go === "next") { A.swapOpen = false; if (A.exIdx < t.exercicios.length - 1) { A.exIdx++; render(); } else { A.screen = "end"; render(); } }
+    else if (go === "prev") { A.swapOpen = false; A.exIdx = Math.max(0, A.exIdx - 1); render(); }
     else if (go === "quit") { A.screen = "end"; render(); }
-    else if (go === "home") { A.screen = "home"; A.tIdx = null; A.marks = {}; A.inputs = {}; ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); render(); }
+    else if (go === "home") { A.screen = "home"; A.tIdx = null; A.marks = {}; A.inputs = {}; A.swap = {}; ls.set("al.swap." + P, {}); ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); render(); }
   });
 
   render();
