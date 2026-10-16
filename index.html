@@ -707,6 +707,11 @@ html.sport.light .setrow.t-valida .sn { color: var(--ink); }
 .setlegend .lg.adapt { color: var(--p2, #FF9F43); border-color: currentColor; }
 .setlegend .lg.valida { color: #0B0D0F; background: var(--accent); border-color: var(--accent); }
 .a-set.t-aquec:not([aria-pressed="true"]) { opacity: .85; border-style: dashed; }
+.sethead, .setrow { grid-template-columns: 58px 1fr 1fr 52px; }
+.setrow .sn { display: flex; flex-direction: column; align-items: center; line-height: 1.05; gap: 3px; }
+.setrow .sn b { font-size: 19px; font-weight: 800; }
+.setrow .sn small { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.setrow.t-aquec .sn { color: var(--muted); }
 </style>
 </head>
 <body>

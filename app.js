@@ -1163,11 +1163,11 @@ function startAluno(S0, P) {
       <div class="setrows">
         <div class="sethead"><span>Série</span><span>Carga (kg)</span><span>Reps</span><span></span></div>
         ${plano.map((pi, i) => { const st = sets[i] || {}; const tag = pi.tipo === "valida" ? String(pi.ord + 1) : TIPOS[pi.tipo].curto; return `<div class="setrow t-${pi.tipo}${m[i] ? " done" : ""}">
-          <span class="sn" title="${TIPOS[pi.tipo].nome}">${tag}</span>
+          <span class="sn" title="${TIPOS[pi.tipo].nome}"><b>${pi.tipo === "valida" ? tag : pi.ord + 1}</b><small>${pi.tipo === "valida" ? "Válida" : pi.tipo === "aquec" ? "Aquec." : "Adapt."}</small></span>
           <input inputmode="decimal" aria-label="Carga · ${TIPOS[pi.tipo].nome} ${pi.ord + 1}" data-skg="${i}" value="${esc(st.kg ?? "")}" placeholder="${esc(phKg(i))}">
           <input inputmode="numeric" aria-label="Repetições · ${TIPOS[pi.tipo].nome} ${pi.ord + 1}" data-sreps="${i}" value="${esc(st.reps ?? "")}" placeholder="${esc(phReps(i))}">
           <button class="setok" data-set="${i}" aria-pressed="${!!m[i]}" aria-label="${TIPOS[pi.tipo].nome} ${pi.ord + 1} feita">✓</button></div>`; }).join("")}
-        ${temTipos ? `<div class="setlegend">${plano.some((x) => x.tipo === "aquec") ? `<span><b class="lg aquec">AQ</b> Aquecimento · ${esc(ex.repsAq || TIPOS.aquec.reps)}, carga leve</span>` : ""}${plano.some((x) => x.tipo === "adapt") ? `<span><b class="lg adapt">AD</b> Adaptação · ${esc(ex.repsAd || TIPOS.adapt.reps)}, perto da carga de trabalho</span>` : ""}<span><b class="lg valida">1</b> Válidas · ${esc(ex.reps)}, pra valer</span></div>` : ""}
+        ${temTipos ? `<div class="setlegend">${plano.some((x) => x.tipo === "aquec") ? `<span><b class="lg aquec">Aquec.</b> ${esc(ex.repsAq || TIPOS.aquec.reps)}, carga leve</span>` : ""}${plano.some((x) => x.tipo === "adapt") ? `<span><b class="lg adapt">Adapt.</b> ${esc(ex.repsAd || TIPOS.adapt.reps)}, perto da carga de trabalho</span>` : ""}<span><b class="lg valida">Válida</b> ${esc(ex.reps)}, pra valer</span></div>` : ""}
       </div>
       <p class="a-muted" style="font-size:.85em;margin:0">${l ? `Última vez (${fmtDate(l.data)}): <b>${lastTxt}</b>` : "Primeira vez: comece leve e anote"}${subir ? ' <span class="pill">Suba a carga</span>' : ""}</p>
       <div class="field obsfield"><label class="label" for="ai-obs">Observações</label>
