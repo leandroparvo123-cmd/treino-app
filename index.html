@@ -775,6 +775,12 @@ html.sport.light .setrow.t-valida .sn { color: var(--ink); }
 .wk-more summary { font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; }
 .wk-more .row { margin-top: 8px; }
 @media (max-width: 380px) { .chip-ed { padding-left: 12px; } }
+
+#wdel { position: fixed; left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 98; display: none; align-items: center; justify-content: center; gap: 10px; height: 64px; border: 2px dashed var(--danger, #FF5C5C); border-radius: 3px; background: color-mix(in srgb, var(--bg, #0B0D0F) 88%, transparent); color: var(--danger, #FF5C5C); font-weight: 800; font-size: 15px; text-transform: uppercase; letter-spacing: .05em; pointer-events: none; backdrop-filter: blur(6px); }
+#wdel span { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 2px; background: var(--danger, #FF5C5C); color: #fff; font-size: 14px; }
+#wdel.show { display: flex; }
+#wdel.hot { background: var(--danger, #FF5C5C); color: #fff; border-style: solid; }
+#wdel.hot span { background: #fff; color: var(--danger, #FF5C5C); }
 </style>
 </head>
 <body>

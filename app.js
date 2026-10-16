@@ -589,7 +589,7 @@ function startAdmin(S0, K0) {
     }).join("");
     return `<div class="sheet wk-ed">
       <div class="pal-wrap"><div class="label">Adicionar em <b class="pal-day">${DIAS[S.wSel]}</b></div><div class="pal">${pal}</div>
-        <p class="hint">Toque no dia e depois na atividade. Também dá pra arrastar. Toque num item pra mudar o horário ou tirar.</p></div>
+        <p class="hint">Toque no dia e depois na atividade, ou arraste. Toque num item pra mudar o horário. Pra tirar, arraste pra fora dos dias.</p></div>
       <div class="wdays">${days}</div>
       <details class="wk-more"><summary>Modelos prontos</summary><div class="row">${Object.entries(MODELOS).map(([k, m]) => `<button class="btn ghost sm" data-act="sem-tpl" data-tpl="${k}" data-arm="tpl-${k}">${esc(m.nome)}</button>`).join("")}<button class="btn danger sm" data-act="sem-clear" data-arm="tpl-clear">Limpar semana</button></div></details>
     </div>`;
@@ -838,10 +838,12 @@ function startAdmin(S0, K0) {
       if (Math.hypot(e.clientX - wDrag.x, e.clientY - wDrag.y) < 10) return;
       wDrag.on = true; const g = wDrag.src.cloneNode(true); g.className += " drag-ghost"; document.body.appendChild(g); wDrag.ghost = g;
       wDrag.src.classList.add("lifted"); document.body.classList.add("is-dragging");
+      if (wDrag.iid) { let z = document.getElementById("wdel"); if (!z) { z = document.createElement("div"); z.id = "wdel"; z.innerHTML = "<span>✕</span> Soltar aqui pra remover"; document.body.appendChild(z); } z.className = "show"; }
     }
     e.preventDefault();
-    wDrag.ghost.style.transform = `translate(${e.clientX - 30}px, ${e.clientY - 22}px)`;
+    wDrag.ghost.style.transform = `translate(${e.clientX - 30}px, ${e.clientY - 64}px)`;
     const under = document.elementFromPoint(e.clientX, e.clientY), row = under && under.closest(".wd");
+    const z = document.getElementById("wdel"); if (z && wDrag.iid) z.classList.toggle("hot", !row);
     if (wDrag.over !== row) { if (wDrag.over) wDrag.over.classList.remove("drop"); if (row) row.classList.add("drop"); wDrag.over = row; }
     if (e.clientY < 80) window.scrollBy(0, -12); else if (e.clientY > window.innerHeight - 120) window.scrollBy(0, 12);
   }, { passive: false });
@@ -849,12 +851,17 @@ function startAdmin(S0, K0) {
     if (!wDrag) return; const d = wDrag; wDrag = null;
     if (!d.on) return;
     wDragEnd = Date.now(); d.ghost.remove(); d.src.classList.remove("lifted"); document.body.classList.remove("is-dragging");
-    if (!d.over) return; d.over.classList.remove("drop");
+    const z = document.getElementById("wdel"); if (z) z.className = "";
+    if (!d.over) {
+      if (d.iid != null && d.from != null) { const p = pessoa(); p.semana[d.from] = diaDe(p, d.from).filter((x) => x.id !== d.iid); if (S.chipEd === d.iid) S.chipEd = null; savePessoa(p, true); redrawWeek(); toast("Removido do dia"); }
+      return;
+    }
+    d.over.classList.remove("drop");
     const to = +d.over.dataset.day, p = pessoa(); S.wSel = to;
     if (d.spec) addToDay(p, to, d.spec); else if (d.iid != null && d.from != null) { if (d.from === to) redrawWeek(); else moveItem(p, d.from, to, d.iid); }
   };
   document.addEventListener("pointerup", wEnd);
-  document.addEventListener("pointercancel", () => { if (wDrag && wDrag.on) { wDrag.ghost.remove(); wDrag.src.classList.remove("lifted"); document.body.classList.remove("is-dragging"); if (wDrag.over) wDrag.over.classList.remove("drop"); } wDrag = null; });
+  document.addEventListener("pointercancel", () => { const z = document.getElementById("wdel"); if (z) z.className = ""; if (wDrag && wDrag.on) { wDrag.ghost.remove(); wDrag.src.classList.remove("lifted"); document.body.classList.remove("is-dragging"); if (wDrag.over) wDrag.over.classList.remove("drop"); } wDrag = null; });
 
   // arrastar exercícios pela alça (funciona com o dedo e com o mouse)
   let drag = null;
