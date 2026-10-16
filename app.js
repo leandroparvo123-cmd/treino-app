@@ -432,8 +432,43 @@ function cardioGuia(it) {
 // ============================================================
 //  Fichas prontas (treinos + semana) que o personal aplica com um toque
 // ============================================================
-const E = (lib, aquec, adapt, series, reps, descanso, nome, alts) => ({ lib, aquec, adapt, series, reps, descanso, ...(nome ? { nome } : {}), ...(alts ? { alts } : {}) });
+const E = (lib, aquec, adapt, series, reps, descanso, nome, alts) => !nome ? E2(lib, aquec, adapt, series, reps, descanso, alts) : ({ lib, aquec, adapt, series, reps, descanso, ...(nome ? { nome } : {}), ...(alts ? { alts } : {}) });
+const E2 = (lib, aquec, adapt, series, reps, descanso, alts) => ({ lib, aquec, adapt, series, reps, descanso, ...(alts ? { alts } : {}) });
 const FICHAS = {
+  pai60: {
+    nome: "Iniciante 60+ · 3x + esteira",
+    desc: "2 treinos curtos que se revezam (A e B), uns 35 min. Máquinas, sentado sempre que der, com equilíbrio no final. Esteira em 2 dias e caminhada no fim de semana.",
+    objetivo: "Força, equilíbrio e disposição",
+    obs: "Carga em que dá pra fazer todas as repetições com a postura certa, sobrando umas 3 a 4. Respire o tempo todo, sem prender o ar. Se sentir tontura, falta de ar forte ou dor no peito, pare e avise. Ficou fácil fazer 15? Sobe um pouquinho a carga.",
+    semanas: 8,
+    treinos: [
+      { nome: "Treino A", ex: [
+        E("legpress", 1, 0, 3, "12–15", "90s", null, ["Sentar e levantar da cadeira", "Cadeira extensora"]),
+        E("supinomaq", 0, 0, 2, "10–12", "90s", null, ["Crucifixo na máquina", "Supino com halteres"]),
+        E("remadamaq", 0, 0, 2, "10–12", "90s", null, ["Remada baixa", "Puxada frente"]),
+        E("elevacao", 0, 0, 2, "10–12", "60s", "Elevação lateral (leve, sentado)", ["Elevação lateral na máquina", "Elevação lateral na polia"]),
+        E("roscasentado", 0, 0, 2, "10–12", "60s", null, ["Rosca na máquina", "Rosca na polia"]),
+        E("equilibrio", 0, 0, 2, "20–30 s cada perna", "45s", null, ["Marcha no lugar com apoio"]),
+      ] },
+      { nome: "Treino B", ex: [
+        E("sentar", 1, 0, 3, "10–12", "90s", "Sentar e levantar segurando peso", ["Leg press", "Cadeira extensora"]),
+        E("puxada", 0, 0, 2, "10–12", "90s", null, ["Remada sentada na máquina", "Remada baixa"]),
+        E("flexora", 0, 0, 2, "12–15", "90s", null, ["Mesa flexora"]),
+        E("triceps", 0, 0, 2, "10–12", "60s", null, ["Tríceps na máquina", "Tríceps francês com halter"]),
+        E("panturrilha", 0, 0, 2, "12–15", "60s", null, ["Panturrilha sentado"]),
+        E("caminhada", 0, 0, 2, "10 passos pra cada lado", "45s", null, ["Marcha no lugar com apoio"]),
+      ] },
+    ],
+    semana: {
+      0: [],
+      1: [{ tipo: "treino", idx: "auto", momento: "Livre" }],
+      2: [{ tipo: "cardio", nome: "Esteira leve", nivel: "leve", min: 25, momento: "Livre", desc: "Caminhando, sem correr. Se quiser, coloque 1 a 2% de inclinação. Pode segurar no apoio." }],
+      3: [{ tipo: "treino", idx: "auto", momento: "Livre" }],
+      4: [{ tipo: "cardio", nome: "Esteira moderada", nivel: "moderado", min: 25, momento: "Livre", desc: "Caminhada mais firme: fala frases curtas, mas não canta. Os 5 primeiros minutos bem devagar." }],
+      5: [{ tipo: "treino", idx: "auto", momento: "Livre" }],
+      6: [{ tipo: "cardio", nome: "Caminhada leve (se tiver vontade)", nivel: "leve", min: 30, momento: "Livre" }],
+    },
+  },
   fullmaq: {
     nome: "Fullbody máquinas · 5x + bike",
     desc: "3 treinos que se revezam (A, B, C), perna sempre no começo. 1 aquecimento, 1 ajuste e 2 válidas nos exercícios grandes.",
@@ -483,7 +518,7 @@ function aplicarFicha(p, key) {
   const F = FICHAS[key]; if (!F) return;
   p.treinos = F.treinos.map((t) => ({ id: rnd(8), nome: t.nome, exercicios: t.ex.map((e) => ({ id: rnd(8), ...e })) }));
   p.semana = {};
-  for (let d = 0; d < 7; d++) p.semana[d] = (F.semana[d] || []).map((it) => it.tipo === "cardio" ? { id: rnd(6), tipo: "cardio", nome: it.nome, min: it.min, momento: it.momento } : { id: rnd(6), tipo: "treino", treinoId: it.idx === "auto" ? "auto" : p.treinos[it.idx].id, momento: it.momento });
+  for (let d = 0; d < 7; d++) p.semana[d] = (F.semana[d] || []).map((it) => it.tipo === "cardio" ? { id: rnd(6), tipo: "cardio", nome: it.nome, min: it.min, momento: it.momento, ...(it.nivel ? { nivel: it.nivel } : {}), ...(it.desc ? { desc: it.desc } : {}) } : { id: rnd(6), tipo: "treino", treinoId: it.idx === "auto" ? "auto" : p.treinos[it.idx].id, momento: it.momento });
   const ini = todayISO();
   p.ficha = { ...(p.ficha || {}), objetivo: (p.ficha && p.ficha.objetivo) || F.objetivo, inicio: ini, troca: plusDays(ini, 7 * F.semanas), obs: F.obs };
 }
