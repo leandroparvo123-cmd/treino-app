@@ -34,6 +34,11 @@ service cloud.firestore {
       match /pessoas/{p} {
         allow read: if logado();
         allow write: if personal();
+        // "Perfil personal": a própria pessoa edita só treinos, semana, ficha e recado
+        allow update: if logado()
+          && resource.data.get("autoEdit", false) == true
+          && request.resource.data.get("autoEdit", false) == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["treinos", "semana", "ficha", "aviso"]);
       }
 
       match /avaliacoes/{a} {

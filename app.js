@@ -30,10 +30,10 @@ const alunoLinkOf = (S, P) => baseUrl() + "#p-" + S + "-" + P;
 function parseLink(str) {
   const i = String(str || "").indexOf("#"); const h = decodeURIComponent((i >= 0 ? String(str).slice(i + 1) : String(str)).trim());
   if (!h) return {};
-  if (/^[ap]-/.test(h)) {
+  if (/^[ape]-/.test(h)) {
     const parts = h.split("-"), S = parts[1], rest = parts.slice(2).join("-");
     if (!S || !rest) return { S: S || null };
-    return parts[0] === "a" ? { S, K: rest } : { S, P: rest };
+    return parts[0] === "a" ? { S, K: rest } : parts[0] === "e" ? { S, P: rest, E: true } : { S, P: rest };
   }
   const q = new URLSearchParams(h); return { S: q.get("s"), K: q.get("a"), P: q.get("p") };
 }
@@ -166,6 +166,7 @@ async function boot() {
     }
     if (K && !P) { ls.set("ct.admin", { s: S, k: K }); return startAdmin(S, K); }
   }
+  if (P && h.E) return startAdmin(S, null, P);
   if (P) return startAluno(S, P);
   return fatal("Esse link chegou incompleto. Copie o link de novo, inteiro, ou cole abaixo.", null, true);
 }
@@ -806,14 +807,14 @@ function shiftMonth(m, delta) { const n = new Date(); const b = m || [n.getFullY
 // ============================================================
 //  MODO PERSONAL (caderno completo)
 // ============================================================
-function startAdmin(S0, K0) {
+function startAdmin(S0, K0, ONLY) {
   show("#admin");
   document.documentElement.classList.add("sport"); readCols();
-  if (DEMO) { const b = $("#banner"); b.hidden = false; b.innerHTML = 'Demonstração: nada aqui é salvo de verdade. <a href="?demo#p-demo-pai">Ver como o aluno vê</a>.'; }
+  if (DEMO && !ONLY) { const b = $("#banner"); b.hidden = false; b.innerHTML = 'Demonstração: nada aqui é salvo de verdade. <a href="?demo#p-demo-pai">Ver como o aluno vê</a>.'; }
   const PLATES = ["--p1", "--p2", "--p3", "--p4", "--p5"];
   const RESTS = ["30s", "45s", "60s", "90s", "2 min", "3 min"];
   const MUSC = { quad: "Frente da coxa", post: "Posterior da coxa", glute: "Glúteos", calf: "Panturrilha", biceps: "Bíceps", triceps: "Tríceps", delt: "Ombros", peito: "Peito", costas: "Costas", abdomen: "Abdômen", lombar: "Lombar", glutmed: "Lateral do quadril" };
-  const S = { loaded: false, pessoas: [], sessoes: [], avals: [], pid: ls.get("ct.pid", null), tab: ls.get("ct.tab", "montar") === "hist" ? "hist" : "montar", treinoSel: {}, drafts: ls.get("ct.drafts", {}), pendingRender: false, newPerson: false, calMonth: null, libTarget: null, libGroup: "Todos", libQuery: "", fold: ls.get("ct.fold", {}), weekOpen: ls.get("ct.weekOpen", false) };
+  const S = { loaded: false, pessoas: [], sessoes: [], avals: [], pid: ONLY || ls.get("ct.pid", null), tab: ls.get("ct.tab", "montar") === "hist" ? "hist" : "montar", treinoSel: {}, drafts: ls.get("ct.drafts", {}), pendingRender: false, newPerson: false, calMonth: null, libTarget: null, libGroup: "Todos", libQuery: "", fold: ls.get("ct.fold", {}), weekOpen: ls.get("ct.weekOpen", false) };
 
   const hoje = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
   $("#today").textContent = hoje.charAt(0).toUpperCase() + hoje.slice(1);
@@ -830,7 +831,7 @@ function startAdmin(S0, K0) {
   const saveTimers = {};
   function savePessoa(p, now) {
     clearTimeout(saveTimers[p.id]);
-    const go = () => { try { return B.set("pessoas", p.id, JSON.parse(JSON.stringify({ nome: p.nome || "", ordem: p.ordem || 0, simples: !!p.simples, aviso: p.aviso || "", ficha: p.ficha || {}, semana: p.semana || {}, treinos: p.treinos || [] }))).catch(writeErr); } catch (e) { writeErr(e); } };
+    const go = () => { try { return B.set("pessoas", p.id, JSON.parse(JSON.stringify({ nome: p.nome || "", ordem: p.ordem || 0, simples: !!p.simples, aviso: p.aviso || "", ficha: p.ficha || {}, semana: p.semana || {}, treinos: p.treinos || [], autoEdit: !!p.autoEdit }))).catch(writeErr); } catch (e) { writeErr(e); } };
     if (now) return go();
     saveTimers[p.id] = setTimeout(go, 700);
   }
@@ -860,11 +861,13 @@ function startAdmin(S0, K0) {
     document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", t.dataset.tab === S.tab ? "true" : "false"));
     const v = $("#view");
     if (!S.loaded) { v.innerHTML = '<div class="empty">Carregando os treinos…</div>'; return; }
+    if (ONLY && (!pessoa() || !pessoa().autoEdit)) { v.innerHTML = `<div class="empty"><b>Edição não liberada</b>O seu personal ainda não ativou a edição pra este perfil.<a class="btn" href="#p-${esc(S0)}-${esc(ONLY)}" onclick="setTimeout(()=>location.reload(),30)">Voltar pro treino</a></div>`; return; }
     if (!pessoa()) { v.innerHTML = '<div class="empty"><b>Nenhuma pessoa ainda</b>Adicione quem vai treinar.<button class="btn" data-act="add-person">Adicionar pessoa</button></div>'; return; }
     if (S.tab === "hist") renderHist(v); else renderMontar(v);
     mountCanvases(v);
   }
   function renderPeople() {
+    if (ONLY) { const me = pessoa(); $("#people").innerHTML = `<div class="only-bar"><span class="av">${esc(((me && me.nome) || "?").trim().charAt(0).toUpperCase())}</span><div><b>${esc((me && me.nome) || "Meu perfil")}</b><small>Editando os seus treinos</small></div><a class="btn sm" href="#p-${esc(S0)}-${esc(ONLY)}" onclick="setTimeout(()=>location.reload(),30)">‹ Voltar pro treino</a></div>`; $("#newPerson").hidden = true; return; }
     $("#people").innerHTML = S.pessoas.map((p) => `<button class="chip" data-pid="${esc(p.id)}" aria-pressed="${p.id === S.pid}"><span class="av">${esc((p.nome || "?").trim().charAt(0).toUpperCase())}</span>${esc(p.nome)}</button>`).join("") + '<button class="chip add" data-act="add-person">+ Pessoa</button>';
     $("#newPerson").hidden = !S.newPerson;
   }
@@ -1034,14 +1037,15 @@ function startAdmin(S0, K0) {
         <div class="tfoot"><div class="row"><button class="btn link" data-act="open-lib">+ Da biblioteca</button><button class="btn link" data-act="add-ex">+ Exercício livre</button></div><button class="btn danger" data-act="del-treino" data-arm="t-${esc(t.id)}">Excluir treino</button></div>
       </div>`).join("");
     v.innerHTML = `<div class="col">
-      <section class="profile">
+      ${ONLY ? "" : `      <section class="profile">
         <div class="profile-head"><span class="av big">${esc((p.nome || "?").trim().charAt(0).toUpperCase())}</span>
           <input id="pn-nome" class="txt pn-nome" data-edit="pnome" value="${esc(p.nome)}" maxlength="30" aria-label="Nome do perfil" placeholder="Nome">
-          <label class="sw" for="pn-simples" title="Letras grandes e só marcar séries, sem anotar carga"><input type="checkbox" id="pn-simples" data-edit="simples"${p.simples ? " checked" : ""}><span>Modo simples</span></label></div>
-        <div class="plink"><span class="label">Link do aluno</span>
+          ${ONLY ? "" : `<label class="sw" for="pn-simples" title="Letras grandes e só marcar séries, sem anotar carga"><input type="checkbox" id="pn-simples" data-edit="simples"${p.simples ? " checked" : ""}><span>Modo simples</span></label>`}</div>
+        ${ONLY ? "" : `<label class="sw sw-line" for="pn-auto"><input type="checkbox" id="pn-auto" data-edit="autoEdit"${p.autoEdit ? " checked" : ""}><span>Perfil personal</span><small>${p.autoEdit ? "Pode editar os próprios treinos pelo link dele. Não cria nem vê outros perfis." : "Ligue pra pessoa montar e editar os próprios treinos pelo link dela."}</small></label>`}
+        ${ONLY ? "" : `<div class="plink"><span class="label">Link do aluno</span>
           <div class="seg"><a target="_blank" rel="noopener" href="${esc(link)}">Abrir</a><button data-copy="${esc(link)}">Copiar</button><a target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent("Esse é o seu treino. Toque no link pra abrir: " + link)}">WhatsApp</a><button data-qr="${esc(link)}">QR</button></div>
-          <div class="qrbox" hidden></div></div>
-      </section>
+          <div class="qrbox" hidden></div></div>`}
+      </section>`}
       <div class="sec-h"><h2>Ficha</h2><span class="saved">Salva sozinha</span></div>
       <div class="sheet ficha-ed">
         <div class="field"><label class="label" for="f-obj">Objetivo</label><input id="f-obj" class="txt" data-edit="f-objetivo" value="${esc(f.objetivo || "")}" placeholder="Ex.: Força e equilíbrio"></div>
@@ -1057,12 +1061,12 @@ function startAdmin(S0, K0) {
         ${Object.entries(FICHAS).map(([k, F]) => `<div class="fpr"><div><b>${esc(F.nome)}</b><p>${esc(F.desc)}</p><p class="fpr-l">${F.treinos.map((t) => esc(t.nome)).join(" · ")}</p></div><button class="btn sm" data-act="ficha-pronta" data-f="${k}" data-arm="fp-${k}">Usar esta ficha</button></div>`).join("")}
         <p class="hint">O histórico de cargas continua guardado.</p>
       </details>
-      ${others.length ? `<div class="sheet"><div class="label">Copiar de outra pessoa</div><div class="row">${others.map((o) => `<button class="btn ghost" data-act="copy-from" data-from="${esc(o.id)}">Copiar de ${esc(o.nome)}</button>`).join("")}</div></div>` : ""}
+      ${others.length && !ONLY ? `<div class="sheet"><div class="label">Copiar de outra pessoa</div><div class="row">${others.map((o) => `<button class="btn ghost" data-act="copy-from" data-from="${esc(o.id)}">Copiar de ${esc(o.nome)}</button>`).join("")}</div></div>` : ""}
       <div class="sheet">
         <div class="field"><label class="label" for="pn-aviso">Recado no início do treino</label><input id="pn-aviso" class="txt" data-edit="aviso" value="${esc(p.aviso || "")}" placeholder="Ex.: Beba água e pare se sentir tontura"></div>
-        <button class="btn danger" data-act="del-person" data-arm="p-${esc(p.id)}">Remover ${esc(p.nome)} e o histórico</button>
+        ${ONLY ? "" : `<button class="btn danger" data-act="del-person" data-arm="p-${esc(p.id)}">Remover ${esc(p.nome)} e o histórico</button>`}
       </div>
-      <div class="sheet"><h3>Seu link de personal</h3><p class="sub" style="margin:0">Use pra abrir o caderno em outro aparelho. Não mande pra ninguém.</p><div class="linkbox">${esc(adminLink(S0, K0))}</div><div class="row"><button class="btn ghost sm" data-copy="${esc(adminLink(S0, K0))}">Copiar meu link</button><button class="btn ghost sm" data-qr="${esc(adminLink(S0, K0))}">Mostrar QR code</button></div><div class="qrbox" hidden></div></div>
+      ${ONLY ? "" : `<div class="sheet"><h3>Seu link de personal</h3><p class="sub" style="margin:0">Use pra abrir o caderno em outro aparelho. Não mande pra ninguém.</p><div class="linkbox">${esc(adminLink(S0, K0))}</div><div class="row"><button class="btn ghost sm" data-copy="${esc(adminLink(S0, K0))}">Copiar meu link</button><button class="btn ghost sm" data-qr="${esc(adminLink(S0, K0))}">Mostrar QR code</button></div><div class="qrbox" hidden></div></div>`}
     </div>`;
   }
 
@@ -1090,10 +1094,10 @@ function startAdmin(S0, K0) {
     const cardioMin = semana.filter(isCardio).reduce((a, s) => a + (s.min || 0), 0);
     const seq = streakDias(ss);
     const st = statsExercicios(ss);
-    const sess = ss.slice(0, 30).map((s) => sessRow(s, true)).join("");
+    const sess = ss.slice(0, 30).map((s) => sessRow(s, !ONLY)).join("");
     v.innerHTML = `<div class="col">
       <div class="grid3"><div class="stat"><b>${thisWeek}</b><span class="label">Treinos na semana</span></div><div class="stat"><b>${cardioMin}</b><span class="label">Min de cardio na semana</span></div><div class="stat"><b>${seq}</b><span class="label">Dias seguidos</span></div></div>
-      <h2>Frequência</h2>${calendar(p)}${S.calDay ? `<div class="dayp"><div class="dayp-h"><b>${esc(DIAS[parseISO(S.calDay).getDay()])}, ${fmtDate(S.calDay)}</b><button class="btn link sm" data-calday="${S.calDay}">Fechar ✕</button></div>${sessoesDe(p.id).filter((x) => x.data === S.calDay).map((x) => sessRow(x, true).replace("<details", "<details open")).join("") || '<p class="a-muted" style="margin:0;padding:4px 2px">Nada registrado nesse dia.</p>'}</div>` : ""}${avalSection(p)}
+      <h2>Frequência</h2>${calendar(p)}${S.calDay ? `<div class="dayp"><div class="dayp-h"><b>${esc(DIAS[parseISO(S.calDay).getDay()])}, ${fmtDate(S.calDay)}</b><button class="btn link sm" data-calday="${S.calDay}">Fechar ✕</button></div>${sessoesDe(p.id).filter((x) => x.data === S.calDay).map((x) => sessRow(x, !ONLY).replace("<details", "<details open")).join("") || '<p class="a-muted" style="margin:0;padding:4px 2px">Nada registrado nesse dia.</p>'}</div>` : ""}${avalSection(p)}
       ${evolResumo(ss, st)}
       <h2>Exercícios</h2>${st.length ? evolPicker(st, S.xsel, "axsel") : '<div class="prog"><div class="prow"><div class="n" style="color:var(--muted);font-weight:500">Os pesos anotados nos treinos aparecem aqui.</div></div></div>'}
       <h2>Treinos feitos</h2><div class="prog">${sess || '<div class="sess"><span class="t" style="color:var(--muted)">Nenhum treino salvo ainda.</span></div>'}</div></div>`;
@@ -1319,7 +1323,7 @@ function startAdmin(S0, K0) {
     const kind = el.dataset.edit; if (!kind) return;
     if (kind.startsWith("f-")) { p.ficha = p.ficha || {}; p.ficha[kind.slice(2)] = el.value; savePessoa(p); return; }
     if (kind === "pnome") { p.nome = el.value.trim() || "Sem nome"; renderPeople(); savePessoa(p); return; }
-    if (kind === "simples") return;
+    if (kind === "simples" || kind === "autoEdit") return;
     if (kind === "aviso") { p.aviso = el.value; savePessoa(p); return; }
     if (kind === "sem") {
       const d = +el.closest("[data-day]").dataset.day, iid = el.closest("[data-iid]").dataset.iid, it = diaDe(p, d).find((x) => x.id === iid); if (!it) return;
@@ -1341,6 +1345,7 @@ function startAdmin(S0, K0) {
     const k = e.target.dataset.edit;
     if (k === "descanso" || k === "f-inicio" || k === "f-troca" || (k === "sem" && e.target.tagName === "SELECT")) e.target.dispatchEvent(new Event("input", { bubbles: true }));
     if (k === "simples") { const p = pessoa(); if (!p) return; p.simples = e.target.checked; savePessoa(p, true); render(); }
+    if (k === "autoEdit") { const p = pessoa(); if (!p) return; p.autoEdit = e.target.checked; savePessoa(p, true); render(); toast(p.autoEdit ? "Perfil personal ligado" : "Perfil personal desligado"); }
   });
   $("#np-cancel").addEventListener("click", () => { S.newPerson = false; renderPeople(); });
   $("#np-ok").addEventListener("click", addPerson);
@@ -1648,8 +1653,9 @@ function startAluno(S0, P) {
       ${blocos}
       ${A.p.aviso ? `<div class="a-note">${esc(A.p.aviso)}</div>` : ""}
       ${showTreino ? `<div class="a-card"><p><b>Exercícios do ${esc(t.nome)}</b> <span class="a-muted" style="font-weight:500;font-size:.75em">· toque pra começar por ele</span></p>${exRows(t, A.tIdx)}</div>` : ""}
-      ${weekCard()}${proxDias()}${seusTreinos()}${offline}`;
+      ${weekCard()}${proxDias()}${seusTreinos()}${A.p.autoEdit ? editMeBtn() : ""}${offline}`;
   }
+  function editMeBtn() { return `<a class="editme" href="#e-${esc(S0)}-${esc(P)}" onclick="setTimeout(()=>location.reload(),30)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4zM13 7l4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span><b>Editar meus treinos</b><small>Montar treinos, semana e ficha</small></span><i>›</i></a>`; }
 
   // registrar cardio
   function cardioScreen() {

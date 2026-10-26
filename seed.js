@@ -4,6 +4,7 @@ export const SEED = {
   "nome": "Eu",
   "ordem": 0,
   "simples": false,
+  "autoEdit": true,
   "aviso": "",
   "ficha": {
    "objetivo": "Secar ganhando massa",
