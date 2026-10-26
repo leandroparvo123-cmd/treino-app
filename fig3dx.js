@@ -20,8 +20,16 @@
       if (!window.THREE) await loadScript((base || "") + "three.min.js");
       if (!window.THREE.GLTFLoader) await loadScript((base || "") + "GLTFLoader.js");
       T = window.THREE;
-      const url = window.__XBOT_URL || (base || "") + "xbot.glb";
-      const gltf = await new Promise((res, rej) => new T.GLTFLoader().load(url, res, undefined, rej));
+      let gltf;
+      if (window.__XBOT_B64) { // prévia: boneco embutido na página, lido sem rede
+        const bin = atob(window.__XBOT_B64), buf = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+        gltf = await new Promise((res, rej) => new T.GLTFLoader().parse(buf.buffer, "", res, rej));
+      } else {
+        const r = await fetch((base || "") + "xbot.glb"); if (!r.ok) throw new Error("xbot " + r.status);
+        const ab = await r.arrayBuffer();
+        gltf = await new Promise((res, rej) => new T.GLTFLoader().parse(ab, "", res, rej));
+      }
       setup(gltf);
       X.status = "ready";
       if (X.onReady) X.onReady();
