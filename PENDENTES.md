@@ -37,3 +37,6 @@ Tudo abaixo está feito e testado na prévia. Publicar = juntar este ramo no `ma
 ## A decidir
 - Sugestão das séries seguintes: repetir o último número digitado no dia ou sempre o da última vez?
 - Cartões de recorde: a Evolução da prévia tem treinos de exemplo (só na demonstração).
+
+## Próxima rodada
+- Progressão variando por carga **e** repetições (pedido do Leandro, 26/out): a sugestão de evolução precisa olhar as duas coisas, não só a carga. Ex.: bateu o topo da faixa de reps em todas as séries → sobe a carga e volta pro começo da faixa; ainda não bateu → mantém a carga e busca mais repetições.
