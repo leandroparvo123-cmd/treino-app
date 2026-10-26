@@ -20,7 +20,7 @@
       if (dot(Nn, V) < 0.0) Nn = -Nn;
       float d1 = max(dot(Nn, L1), 0.0), d2 = max(dot(Nn, L2), 0.0);
       float hemi = 0.5 + 0.5 * Nn.y;
-      vec3 amb = mix(vec3(0.34,0.33,0.32), vec3(0.62,0.64,0.68), hemi);
+      vec3 amb = mix(vec3(0.36,0.33,0.31), vec3(0.6,0.63,0.68), hemi);
       vec3 H = normalize(L1 + V); float s = pow(max(dot(Nn, H), 0.0), 28.0) * spec;
       float fr = 1.0 - max(dot(Nn, V), 0.0);
       float edge = mix(1.0, 0.62, pow(fr, 1.8));
@@ -109,41 +109,60 @@
   const FRONT = Math.PI / 2, BACK = Math.PI * 1.5;
   // peças do corpo (em coordenadas locais da articulação), lado: +1 esquerda, -1 direita
   function buildParts(side) {
-    const sg = side, LAT = sg > 0 ? 0 : Math.PI; // lado de fora
+    const sg = side, LAT = sg > 0 ? 0 : Math.PI, MED = sg > 0 ? Math.PI : 0;
+    const FL = sg > 0 ? FRONT - 0.95 : FRONT + 0.95, FM = sg > 0 ? FRONT + 0.7 : FRONT - 0.7; // frente-lateral e frente-medial
+    const BL = sg > 0 ? BACK + 0.45 : BACK - 0.45, BM = sg > 0 ? BACK - 0.45 : BACK + 0.45;
+    const bump = (y, th, sy, sth, a) => ({ y, th, sy, sth, a });
     const parts = {};
-    // pelve (quadro M0, origem na pelve)
-    parts.pelvis = revolve(-0.15, 0.09, (y) => [lerpKeys([-0.15, -0.08, 0.0, 0.09], [0.11, 0.16, 0.168, 0.15], y), lerpKeys([-0.15, -0.08, 0.0, 0.09], [0.08, 0.115, 0.118, 0.105], y)],
-      [{ y: -0.05, th: BACK + 0.45, sy: 0.06, sth: 0.4, a: 0.028 }, { y: -0.05, th: BACK - 0.45, sy: 0.06, sth: 0.4, a: 0.028 }],
-      { rings: 18, seg: 26, cap: 0.22, regFn: (y, th) => { const gl1 = Math.max(g(y, th, -0.05, BACK + 0.45, 0.07, 0.55), g(y, th, -0.05, BACK - 0.45, 0.07, 0.55)); const gm = Math.max(g(y, th, 0.02, 0, 0.06, 0.4), g(y, th, 0.02, Math.PI, 0.06, 0.4)); return gl1 > 0.25 ? [3, Math.min(1, gl1 * 1.6)] : gm > 0.3 ? [12, Math.min(1, gm * 1.5)] : [13, 1]; } });
-    // tronco (quadro Mt, origem na pelve)
+    // pelve (quadro M0)
+    parts.pelvis = revolve(-0.15, 0.09, (y) => [lerpKeys([-0.15, -0.08, 0.0, 0.09], [0.11, 0.16, 0.168, 0.148], y), lerpKeys([-0.15, -0.08, 0.0, 0.09], [0.08, 0.116, 0.12, 0.104], y)],
+      [bump(-0.05, BACK + 0.45, 0.06, 0.42, 0.03), bump(-0.05, BACK - 0.45, 0.06, 0.42, 0.03), bump(-0.09, BACK, 0.05, 0.08, -0.008)],
+      { rings: 26, seg: 34, cap: 0.22, regFn: (y, th) => { const gl1 = Math.max(g(y, th, -0.05, BACK + 0.45, 0.07, 0.55), g(y, th, -0.05, BACK - 0.45, 0.07, 0.55)); const gm = Math.max(g(y, th, 0.02, 0, 0.06, 0.4), g(y, th, 0.02, Math.PI, 0.06, 0.4)); return gl1 > 0.25 ? [3, Math.min(1, gl1 * 1.6)] : gm > 0.3 ? [12, Math.min(1, gm * 1.5)] : [13, 1]; } });
+    // tronco (quadro Mt)
     const ty = [0.04, 0.1, 0.18, 0.26, 0.33, 0.4, 0.46, 0.52];
-    parts.torso = revolve(0.04, 0.53, (y) => [lerpKeys(ty, [0.15, 0.135, 0.128, 0.142, 0.168, 0.19, 0.185, 0.12], y), lerpKeys(ty, [0.1, 0.092, 0.09, 0.098, 0.11, 0.116, 0.108, 0.075], y)],
-      [{ y: 0.37, th: FRONT - 0.42, sy: 0.05, sth: 0.34, a: 0.032 }, { y: 0.37, th: FRONT + 0.42, sy: 0.05, sth: 0.34, a: 0.032 },
-        ...[0.1, 0.165, 0.23].flatMap((yy) => [{ y: yy, th: FRONT - 0.17, sy: 0.022, sth: 0.13, a: 0.009 }, { y: yy, th: FRONT + 0.17, sy: 0.022, sth: 0.13, a: 0.009 }]),
-        { y: 0.32, th: BACK - 0.75, sy: 0.08, sth: 0.35, a: 0.022 }, { y: 0.32, th: BACK + 0.75, sy: 0.08, sth: 0.35, a: 0.022 }, { y: 0.47, th: BACK, sy: 0.04, sth: 0.6, a: 0.012 }],
-      { rings: 26, seg: 30, cap: 0.12, capScale: 0.35, regFn: (y, th) => {
+    const pairs = (y, d, sy, sth, a) => [bump(y, FRONT - d, sy, sth, a), bump(y, FRONT + d, sy, sth, a)];
+    const back2 = (y, d, sy, sth, a) => [bump(y, BACK - d, sy, sth, a), bump(y, BACK + d, sy, sth, a)];
+    parts.torso = revolve(0.04, 0.535, (y) => [lerpKeys(ty, [0.15, 0.134, 0.126, 0.142, 0.17, 0.192, 0.186, 0.12], y), lerpKeys(ty, [0.1, 0.091, 0.089, 0.098, 0.11, 0.116, 0.108, 0.075], y)],
+      [...pairs(0.372, 0.42, 0.048, 0.34, 0.034), ...pairs(0.318, 0.42, 0.014, 0.4, -0.008), bump(0.385, FRONT, 0.07, 0.07, -0.009),
+        ...[0.1, 0.165, 0.23].flatMap((yy) => pairs(yy, 0.17, 0.022, 0.13, 0.01)), bump(0.17, FRONT, 0.1, 0.045, -0.006), bump(0.133, FRONT, 0.008, 0.3, -0.004), bump(0.198, FRONT, 0.008, 0.3, -0.004),
+        ...pairs(0.14, 1.0, 0.05, 0.25, 0.009), ...[0.265, 0.3, 0.335].flatMap((yy) => pairs(yy, 1.18, 0.012, 0.11, 0.006)),
+        ...back2(0.31, 0.8, 0.08, 0.35, 0.025), bump(0.28, BACK, 0.25, 0.07, -0.009), ...back2(0.12, 0.18, 0.06, 0.12, 0.009),
+        ...back2(0.49, 0.35, 0.04, 0.45, 0.022), ...pairs(0.505, 0.55, 0.012, 0.4, 0.006)],
+      { rings: 40, seg: 44, cap: 0.12, capScale: 0.35, regFn: (y, th) => {
         const pe = Math.max(g(y, th, 0.37, FRONT - 0.4, 0.06, 0.42), g(y, th, 0.37, FRONT + 0.4, 0.06, 0.42));
-        const ab = g(y, th, 0.17, FRONT, 0.1, 0.42), la = Math.max(g(y, th, 0.3, BACK - 0.75, 0.1, 0.45), g(y, th, 0.3, BACK + 0.75, 0.1, 0.45)), lo = g(y, th, 0.1, BACK, 0.06, 0.35);
+        const ab = Math.max(g(y, th, 0.17, FRONT, 0.1, 0.42), 0.8 * Math.max(g(y, th, 0.14, FRONT - 1.0, 0.06, 0.3), g(y, th, 0.14, FRONT + 1.0, 0.06, 0.3)));
+        const la = Math.max(g(y, th, 0.3, BACK - 0.75, 0.1, 0.45), g(y, th, 0.3, BACK + 0.75, 0.1, 0.45), 0.8 * Math.max(g(y, th, 0.48, BACK - 0.35, 0.05, 0.5), g(y, th, 0.48, BACK + 0.35, 0.05, 0.5)));
+        const lo = Math.max(g(y, th, 0.11, BACK - 0.18, 0.07, 0.2), g(y, th, 0.11, BACK + 0.18, 0.07, 0.2));
         const m = Math.max(pe, ab, la, lo); if (m < 0.2) return [0, 0];
         return m === pe ? [5, Math.min(1, pe * 1.5)] : m === ab ? [7, Math.min(1, ab * 1.4)] : m === la ? [6, Math.min(1, la * 1.5)] : [8, Math.min(1, lo * 1.5)]; } });
-    parts.neck = revolve(0.0, 0.11, () => [0.048, 0.046], [], { rings: 8, seg: 16, cap: 0.0 });
-    parts.head = revolve(-0.112, 0.112, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - (y / 0.112) ** 2)); return [0.084 * k, 0.098 * k]; }, [{ y: -0.06, th: FRONT, sy: 0.04, sth: 0.7, a: 0.01 }], { rings: 18, seg: 22, cap: 0 });
-    // braço (quadro Ms, origem no ombro, para baixo)
-    parts.upper = revolve(0.0, -B.upper, (y) => { const t = -y / B.upper, r = lerpKeys([0, 0.2, 0.5, 0.8, 1], [0.058, 0.062, 0.06, 0.05, 0.043], t); return [r, r * 0.95]; },
-      [{ y: -B.upper * 0.5, th: FRONT, sy: 0.06, sth: 0.55, a: 0.017 }, { y: -B.upper * 0.42, th: BACK, sy: 0.07, sth: 0.6, a: 0.015 }],
-      { rings: 20, seg: 22, cap: 0.14, regFn: (y, th) => { const bi = g(y, th, -B.upper * 0.5, FRONT, 0.08, 0.75), tr = g(y, th, -B.upper * 0.42, BACK, 0.09, 0.8); return bi > tr ? [10, Math.min(1, bi * 1.4)] : [11, Math.min(1, tr * 1.4)]; } });
-    parts.delt = revolve(-0.09, 0.07, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - ((y + 0.01) / 0.085) ** 2)); return [0.08 * k, 0.078 * k]; }, [], { rings: 14, seg: 20, cap: 0, regFn: () => [9, 1] });
-    parts.fore = revolve(0.0, -B.fore, (y) => { const t = -y / B.fore, r = lerpKeys([0, 0.18, 0.45, 0.8, 1], [0.044, 0.05, 0.046, 0.034, 0.03], t); return [r, r * 0.86]; }, [], { rings: 16, seg: 20, cap: 0.14 });
-    parts.hand = revolve(-0.055, 0.04, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - ((y + 0.008) / 0.05) ** 2)); return [0.036 * k, 0.026 * k]; }, [], { rings: 12, seg: 16, cap: 0 });
-    // coxa (quadro Mth, origem no quadril)
-    parts.thigh = revolve(0.03, -B.thigh, (y) => { const t = -y / B.thigh, r = lerpKeys([0, 0.15, 0.45, 0.8, 1], [0.096, 0.1, 0.092, 0.072, 0.058], t); return [r, r * 1.02]; },
-      [{ y: -B.thigh * 0.55, th: FRONT, sy: 0.1, sth: 0.65, a: 0.024 }, { y: -B.thigh * 0.8, th: FRONT - sg * 0.6, sy: 0.05, sth: 0.4, a: 0.016 }, { y: -B.thigh * 0.5, th: BACK, sy: 0.12, sth: 0.7, a: 0.016 }],
-      { rings: 24, seg: 24, cap: 0.1, regFn: (y, th) => { const t = -y / B.thigh; if (t < 0.22) return [13, 1]; const q = Math.max(g(y, th, -B.thigh * 0.58, FRONT, 0.14, 0.95), g(y, th, -B.thigh * 0.8, FRONT - sg * 0.6, 0.06, 0.5)), p = g(y, th, -B.thigh * 0.58, BACK, 0.15, 0.95); return q > p ? [1, Math.min(1, q * 1.4)] : [2, Math.min(1, p * 1.4)]; } });
-    parts.knee = revolve(-0.05, 0.05, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - (y / 0.05) ** 2)); return [0.056 * k, 0.056 * k]; }, [], { rings: 10, seg: 16, cap: 0 });
-    parts.shin = revolve(0.0, -B.shin, (y) => { const t = -y / B.shin, r = lerpKeys([0, 0.2, 0.45, 0.8, 1], [0.056, 0.062, 0.056, 0.04, 0.034], t); return [r, r]; },
-      [{ y: -B.shin * 0.28, th: BACK - 0.3, sy: 0.07, sth: 0.45, a: 0.022 }, { y: -B.shin * 0.28, th: BACK + 0.3, sy: 0.07, sth: 0.45, a: 0.02 }],
-      { rings: 20, seg: 22, cap: 0.1, regFn: (y, th) => { const c = g(y, th, -B.shin * 0.3, BACK, 0.1, 0.8); return [4, Math.min(1, c * 1.4)]; } });
-    parts.foot = revolve(-0.12, 0.12, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - (y / 0.12) ** 2)); return [0.045 * k, 0.032 * k]; }, [], { rings: 14, seg: 16, cap: 0 });
+    parts.neck = revolve(0.0, 0.11, (y) => [lerpKeys([0, 0.11], [0.056, 0.044], y), lerpKeys([0, 0.11], [0.05, 0.046], y)], [bump(0.05, FRONT - 0.55, 0.04, 0.2, 0.006), bump(0.05, FRONT + 0.55, 0.04, 0.2, 0.006)], { rings: 12, seg: 24, cap: 0.0 });
+    // cabeça de manequim: testa, nariz, maçãs, queixo, orelhas
+    parts.head = revolve(-0.112, 0.112, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - (y / 0.112) ** 2)), jaw = y < -0.02 ? lerpKeys([-0.11, -0.02], [0.74, 1], y) : 1; return [0.082 * k * jaw, 0.097 * k * (y < -0.03 ? lerpKeys([-0.11, -0.03], [0.86, 1], y) : 1)]; },
+      [bump(0.025, FRONT, 0.014, 0.55, 0.006), bump(-0.008, FRONT, 0.026, 0.1, 0.014), ...pairs(-0.008, 0.62, 0.02, 0.25, 0.006), bump(-0.088, FRONT, 0.02, 0.33, 0.008), bump(0.0, 0, 0.03, 0.12, 0.009), bump(0.0, Math.PI, 0.03, 0.12, 0.009), bump(0.03, BACK, 0.05, 0.6, 0.006), ...pairs(0.005, 0.32, 0.012, 0.13, -0.0025)],
+      { rings: 30, seg: 32, cap: 0 });
+    // braço: bíceps com pico, braquial, tríceps em ferradura
+    parts.upper = revolve(0.0, -B.upper, (y) => { const t = -y / B.upper, r = lerpKeys([0, 0.2, 0.5, 0.8, 1], [0.064, 0.068, 0.066, 0.055, 0.047], t); return [r, r * 0.95]; },
+      [bump(-B.upper * 0.52, FRONT, 0.055, 0.5, 0.02), bump(-B.upper * 0.72, LAT, 0.04, 0.35, 0.007), bump(-B.upper * 0.38, BACK - 0.35, 0.06, 0.4, 0.013), bump(-B.upper * 0.42, BACK + 0.35, 0.06, 0.4, 0.013), bump(-B.upper * 0.7, BACK, 0.03, 0.5, -0.004)],
+      { rings: 30, seg: 30, cap: 0.14, regFn: (y, th) => { const bi = g(y, th, -B.upper * 0.5, FRONT, 0.08, 0.75), tr = g(y, th, -B.upper * 0.42, BACK, 0.09, 0.8); return bi > tr ? [10, Math.min(1, bi * 1.4)] : [11, Math.min(1, tr * 1.4)]; } });
+    // ombro com as três partes do deltoide
+    parts.delt = revolve(-0.09, 0.07, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - ((y + 0.01) / 0.085) ** 2)); return [0.078 * k, 0.076 * k]; },
+      [bump(-0.03, FRONT, 0.04, 0.45, 0.012), bump(-0.03, LAT, 0.045, 0.5, 0.015), bump(-0.025, BACK, 0.04, 0.45, 0.01)], { rings: 22, seg: 28, cap: 0, regFn: () => [9, 1] });
+    parts.elbow = revolve(-0.045, 0.045, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - (y / 0.045) ** 2)); return [0.046 * k, 0.044 * k]; }, [], { rings: 12, seg: 18, cap: 0 });
+    parts.fore = revolve(0.0, -B.fore, (y) => { const t = -y / B.fore, r = lerpKeys([0, 0.18, 0.45, 0.8, 1], [0.049, 0.056, 0.05, 0.037, 0.032], t); return [r, r * 0.86]; },
+      [bump(-B.fore * 0.22, sg > 0 ? Math.PI / 4 : (3 * Math.PI) / 4, 0.05, 0.4, 0.012), bump(-B.fore * 0.3, sg > 0 ? (3 * Math.PI) / 4 : Math.PI / 4, 0.06, 0.45, 0.008)], { rings: 26, seg: 26, cap: 0.14 });
+    parts.hand = revolve(-0.075, 0.04, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - ((y + 0.0175) / 0.0575) ** 2)); return [0.046 * k, 0.026 * k * (y < -0.03 ? 0.85 : 1)]; }, [], { rings: 14, seg: 18, cap: 0 });
+    // coxa: reto femoral, vasto lateral, vasto medial (gota), adutores, posteriores em dois feixes
+    parts.thigh = revolve(0.03, -B.thigh, (y) => { const t = -y / B.thigh, r = lerpKeys([0, 0.15, 0.45, 0.8, 1], [0.097, 0.101, 0.092, 0.072, 0.058], t); return [r, r * 1.02]; },
+      [bump(-B.thigh * 0.48, FRONT, 0.1, 0.35, 0.018), bump(-B.thigh * 0.5, FL, 0.13, 0.45, 0.018), bump(-B.thigh * 0.8, FM, 0.05, 0.38, 0.018), bump(-B.thigh * 0.28, MED, 0.08, 0.5, 0.012),
+        bump(-B.thigh * 0.52, BACK - 0.3, 0.12, 0.35, 0.014), bump(-B.thigh * 0.52, BACK + 0.3, 0.12, 0.35, 0.014), bump(-B.thigh * 0.5, LAT, 0.2, 0.08, -0.004)],
+      { rings: 34, seg: 32, cap: 0.1, regFn: (y, th) => { const t = -y / B.thigh; if (t < 0.22) return [13, 1]; const q = Math.max(g(y, th, -B.thigh * 0.55, FRONT, 0.14, 0.9), g(y, th, -B.thigh * 0.55, FL, 0.14, 0.55), g(y, th, -B.thigh * 0.8, FM, 0.06, 0.5)), p = g(y, th, -B.thigh * 0.58, BACK, 0.15, 0.95); return q > p ? [1, Math.min(1, q * 1.4)] : [2, Math.min(1, p * 1.4)]; } });
+    parts.knee = revolve(-0.05, 0.05, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - (y / 0.05) ** 2)); return [0.056 * k, 0.056 * k]; }, [bump(0.0, FRONT, 0.025, 0.4, 0.012)], { rings: 14, seg: 20, cap: 0 });
+    // perna: gastrocnêmio em dois feixes (medial maior), tibial anterior
+    parts.shin = revolve(0.0, -B.shin, (y) => { const t = -y / B.shin, r = lerpKeys([0, 0.2, 0.45, 0.8, 1], [0.055, 0.06, 0.054, 0.039, 0.034], t); return [r, r]; },
+      [bump(-B.shin * 0.3, BM, 0.08, 0.42, 0.024), bump(-B.shin * 0.25, BL, 0.07, 0.4, 0.018), bump(-B.shin * 0.35, FL, 0.1, 0.3, 0.009), bump(-B.shin * 0.5, FRONT + (sg > 0 ? 0.35 : -0.35), 0.2, 0.12, -0.003)],
+      { rings: 30, seg: 28, cap: 0.1, regFn: (y, th) => { const c = Math.max(g(y, th, -B.shin * 0.3, BM, 0.1, 0.6), g(y, th, -B.shin * 0.27, BL, 0.09, 0.55)); return [4, Math.min(1, c * 1.5)]; } });
+    // pé com calcanhar e peito do pé
+    parts.foot = revolve(-0.13, 0.13, (y) => { const k = Math.sqrt(Math.max(0.0001, 1 - (y / 0.13) ** 2)); return [0.052 * k * (y > 0 ? 1.06 : 0.88), 0.04 * k * (y > 0 ? lerpKeys([0, 0.13], [1, 0.55], y) : 1)]; }, [], { rings: 18, seg: 20, cap: 0 });
     return parts;
   }
 
@@ -200,7 +219,7 @@
   const LIGHT1 = norm([-0.5, 0.9, 0.55]), LIGHT2 = norm([0.8, 0.2, -0.3]), SHADOW = norm([0.25, 1, 0.18]);
   function pals(theme) {
     const p = PAL[theme === "light" ? "light" : "dark"];
-    if (!p.gskin) { p.name = theme; p.gskin = [0.8, 0.82, 0.85]; p.ghl = [0.96, 0.33, 0.2]; p.gshorts = [0.2, 0.22, 0.26]; }
+    if (!p.gskin) { p.name = theme; p.gskin = [0.85, 0.86, 0.88]; p.ghl = [0.96, 0.33, 0.2]; p.gshorts = [0.2, 0.22, 0.26]; }
     return p;
   }
   const PROPC = { prop: [0.42, 0.45, 0.5], pad: [0.2, 0.22, 0.26], metal: [0.62, 0.65, 0.7], plate: [0.16, 0.17, 0.19], rope: [0.8, 0.74, 0.6], cable: [0.55, 0.57, 0.6], skin: [0.86, 0.87, 0.89], hl: [0.95, 0.36, 0.22] };
@@ -210,7 +229,7 @@
     if (!ok && !init()) return false;
     const def = F.ANIM3[name] || F.ANIM3.parado, pal = pals(theme);
     if (!CACHE[name]) CACHE[name] = boundsOf(def);
-    const cam = camera({ ...def, zoom: (def.zoom || 0.93) * 0.8 }, w, h, CACHE[name]);
+    const cam = camera({ ...def, zoom: (def.zoom || 0.93) * 0.9 }, w, h, CACHE[name]);
     dpr = Math.min(2, dpr || 1);
     const W = Math.max(2, Math.round(w * dpr)), H = Math.max(2, Math.round(h * dpr));
     if (cv.width < W || cv.height < H) { cv.width = Math.max(cv.width, W); cv.height = Math.max(cv.height, H); }
@@ -232,6 +251,7 @@
     for (const s of ["L", "R"]) {
       body("delt", s, J["Ms" + s], loc(J["Ms" + s], J["sh" + s], [(s === "L" ? 1 : -1) * 0.012, -0.012, 0]));
       body("upper", s, J["Ms" + s], J["sh" + s]);
+      body("elbow", s, J["Me" + s], J["el" + s]);
       body("fore", s, J["Me" + s], J["el" + s]);
       body("hand", s, J["Me" + s], J["wr" + s]);
       body("thigh", s, J["Mth" + s], J["hip" + s]);
@@ -257,7 +277,13 @@
     gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.EQUAL, 0, 0xff); gl.stencilOp(gl.KEEP, gl.KEEP, gl.INCR);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     const aPf = gl.getAttribLocation(progFlat, "p");
-    for (const d of L) { gl.uniformMatrix4fv(gl.getUniformLocation(progFlat, "M"), false, model(d.M3, d.o, d.s)); gl.bindBuffer(gl.ARRAY_BUFFER, d.g.p); gl.enableVertexAttribArray(aPf); gl.vertexAttribPointer(aPf, 3, gl.FLOAT, false, 0, 0); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, d.g.i); gl.drawElements(gl.TRIANGLES, d.g.n, gl.UNSIGNED_SHORT, 0); }
+    const JIT = [[0, 0], [0.12, 0.05], [-0.1, 0.08], [0.05, -0.12]], sa = theme === "light" ? 0.085 : 0.095;
+    gl.uniform4fv(gl.getUniformLocation(progFlat, "col"), [0, 0, 0, sa]);
+    for (const [jx, jz] of JIT) {
+      gl.clear(gl.STENCIL_BUFFER_BIT);
+      gl.uniform3fv(gl.getUniformLocation(progFlat, "Ld"), norm([SHADOW[0] + jx, SHADOW[1], SHADOW[2] + jz]));
+      for (const d of L) { gl.uniformMatrix4fv(gl.getUniformLocation(progFlat, "M"), false, model(d.M3, d.o, d.s)); gl.bindBuffer(gl.ARRAY_BUFFER, d.g.p); gl.enableVertexAttribArray(aPf); gl.vertexAttribPointer(aPf, 3, gl.FLOAT, false, 0, 0); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, d.g.i); gl.drawElements(gl.TRIANGLES, d.g.n, gl.UNSIGNED_SHORT, 0); }
+    }
     gl.disable(gl.STENCIL_TEST); gl.disable(gl.BLEND); gl.depthMask(true);
     // corpo e aparelhos com luz
     gl.useProgram(prog);
