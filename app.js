@@ -286,7 +286,9 @@ function paint(c, t) {
   if (a3) {
     const tt = c._w < 150 ? 1.3 : t; if (c._w < 150) c._static = true;
     const t0 = performance.now();
-    if (!(window.FIG3DGL && window.FIG3DGL.draw(ctx, a3, tt, c._w, c._h, theme3d(), c._dpr))) window.FIG3D.draw(ctx, a3, tt, c._w, c._h, theme3d());
+    const X3 = window.FIG3DX;
+    if (X3 && X3.status === "idle") { X3.onReady = () => canv.forEach((cc) => { cc._static = false; cc._n = 0; cc._ms = null; if (cc.isConnected) paint(cc, performance.now() / 1000); }); X3.start(""); }
+    if (!(X3 && X3.draw(ctx, a3, tt, c._w, c._h, theme3d(), c._dpr)) && !(window.FIG3DGL && window.FIG3DGL.draw(ctx, a3, tt, c._w, c._h, theme3d(), c._dpr))) window.FIG3D.draw(ctx, a3, tt, c._w, c._h, theme3d());
     // aparelho lento: o boneco para em vez de travar a tela
     const dt = performance.now() - t0; c._ms = c._ms == null ? dt : c._ms * 0.8 + dt * 0.2; c._n = (c._n || 0) + 1;
     if (c._n > 6 && c._ms > 45) c._static = true;

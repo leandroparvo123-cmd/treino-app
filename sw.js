@@ -1,6 +1,6 @@
 // Guarda os arquivos do app no celular pra ele abrir mesmo com internet fraca.
 const CACHE = "treino-v28";
-const CORE = ["./", "index.html", "app.js", "fig.js", "fig3d.js", "fig3dgl.js", "seed.js", "config.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-180.png"];
+const CORE = ["./", "index.html", "app.js", "fig.js", "fig3d.js", "fig3dgl.js", "fig3dx.js", "seed.js", "config.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-180.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -14,6 +14,11 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   // bibliotecas do Firebase: primeiro do celular, depois da internet
   if (url.hostname === "www.gstatic.com" && url.pathname.startsWith("/firebasejs/")) {
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return res; })));
+    return;
+  }
+  // boneco 3D e biblioteca (arquivos grandes que não mudam): primeiro do celular
+  if (url.origin === self.location.origin && /(xbot\.glb|three\.min\.js|GLTFLoader\.js)$/.test(url.pathname)) {
     e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return res; })));
     return;
   }
