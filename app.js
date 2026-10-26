@@ -1647,6 +1647,7 @@ function startAluno(S0, P) {
       V().innerHTML = `
         <div class="a-headrow"><p class="a-muted" style="font-size:18px">${dateCap}</p>${themeBtn()}</div>
         <div><h1>${titulo}</h1></div>
+        ${resumeBox()}
         ${cItems.map((c) => cardioCard(c, true)).join("")}
         ${showTreino ? `<div class="a-card"><p><b>${t.exercicios.length} exercícios</b> · mais ou menos 35 minutos</p>
           ${exRows(t, A.tIdx)}</div>
@@ -1676,11 +1677,35 @@ function startAluno(S0, P) {
     if (!sem) blocos = hero;
     V().innerHTML = `
       <header class="appbar"><div class="hello-box"><div class="hello">${hello}${nomeCurto() ? ", " + esc(nomeCurto()) : ""}</div><div class="sub">${dateCap}</div></div>${themeBtn()}</header>
+      ${resumeBox()}
       ${sem ? `<div class="label" style="margin-bottom:-8px">Hoje · ${DIAS[dow]}</div>` : ""}
       ${blocos}
       ${A.p.aviso ? `<div class="a-note">${esc(A.p.aviso)}</div>` : ""}
       ${showTreino ? `<div class="a-card"><p><b>Exercícios do ${esc(t.nome)}</b> <span class="a-muted" style="font-weight:500;font-size:.75em">· toque pra começar por ele</span></p>${exRows(t, A.tIdx)}</div>` : ""}
       ${weekCard()}${proxDias()}${seusTreinos()}${A.p.autoEdit ? editMeBtn() : ""}${offline}`;
+  }
+  // treino em andamento: fica salvo no aparelho até o fim do dia
+  function runSave() { const t = A.p && A.p.treinos && A.p.treinos[A.tIdx]; if (t) ls.set("al.run." + P, { d: todayISO(), tid: t.id, ex: A.exIdx || 0, fd: A.forDate || null, so: !!A.savedOnce }); }
+  function runClear() { ls.set("al.run." + P, null); }
+  function runGet() {
+    const r = ls.get("al.run." + P, null); if (!r || !A.p) return null;
+    if (r.d !== todayISO()) { runClear(); return null; }
+    const idx = (A.p.treinos || []).findIndex((t) => t.id === r.tid); if (idx < 0) { runClear(); return null; }
+    const marcou = Object.values(A.marks || {}).some((m) => (m || []).some(Boolean)), digitou = Object.keys(A.inputs || {}).length > 0;
+    if (!marcou && !digitou && !r.ex) return null;
+    return { ...r, idx };
+  }
+  function resumeBox() {
+    const r = runGet(); if (!r) return "";
+    const t = A.p.treinos[r.idx], n = t.exercicios.length;
+    const feitos = t.exercicios.filter((ex) => (A.marks[curEx(ex).id] || A.marks[ex.id] || []).some(Boolean)).length;
+    return `<section class="a-card resume-box" style="border:2px solid var(--acc,#C8F31D)">
+      <div class="kicker">Treino em andamento</div>
+      <p style="font-size:1.15em;margin:6px 0 2px"><b>${esc(t.nome)}</b></p>
+      <p class="a-muted" style="margin:0 0 14px">${feitos} de ${n} exercícios com séries marcadas. Está tudo salvo.</p>
+      <button class="a-big" data-go="resume">Continuar de onde parei</button>
+      <button class="a-link" data-go="fresh">Começar do zero</button>
+    </section>`;
   }
   function editMeBtn() { return `<a class="editme" href="#e-${esc(S0)}-${esc(P)}" onclick="setTimeout(()=>location.reload(),30)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4zM13 7l4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span><b>Editar meus treinos</b><small>Montar treinos, semana e ficha</small></span><i>›</i></a>`; }
 
@@ -1808,6 +1833,7 @@ function startAluno(S0, P) {
   }
 
   function finish() {
+    runClear();
     const t = A.p.treinos[A.tIdx];
     const itens = {}; let feitas = 0;
     t.exercicios.map(curEx).forEach((ex) => {
@@ -1859,6 +1885,7 @@ function startAluno(S0, P) {
     const onHome = A.screen === "home";
     $("#atabs").hidden = !onHome;
     document.querySelectorAll("[data-atab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.atab === A.tab ? "true" : "false"));
+    if (A.screen === "ex") runSave();
     if (A.screen === "edit") editScreen(); else if (A.screen === "ex") exercise(); else if (A.screen === "end") finish(); else if (A.screen === "cardio") cardioScreen(); else if (A.tab === "evol") evol(); else home();
     requestAnimationFrame(() => mountCanvases(V()));
   }
@@ -1996,6 +2023,8 @@ function startAluno(S0, P) {
     else if (go === "ed-del") { if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Toque de novo pra apagar"; return; } delEdit(); }
     else if (go === "ed-cancel") { A.edit = null; A.screen = "home"; render(); }
     else if (go === "quit") { A.screen = "end"; endRest(); render(); }
+    else if (go === "resume") { const r = runGet(); if (!r) { render(); return; } A.tIdx = r.idx; A.exIdx = Math.min(r.ex || 0, A.p.treinos[r.idx].exercicios.length - 1); A.forDate = r.fd || null; A.savedOnce = !!r.so; A.selDate = null; A.screen = "ex"; keepAwake(); render(); }
+    else if (go === "fresh") { if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Toque de novo pra apagar o que marcou"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "Começar do zero"; } }, 4000); return; } runClear(); A.marks = {}; A.inputs = {}; A.swap = {}; ls.set("al.swap." + P, {}); ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); A.exIdx = 0; render(); toast("Pronto, pode começar do zero"); }
     else if (go === "home") { A.screen = "home"; A.tIdx = null; A.marks = {}; A.inputs = {}; A.swap = {}; ls.set("al.swap." + P, {}); ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); render(); }
   });
 
