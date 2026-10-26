@@ -1622,7 +1622,13 @@ function startAluno(S0, P) {
   }
   function home() {
     if (!A.loaded) { V().innerHTML = `<p class="a-muted">Carregando seu treino…</p>`; return; }
-    if (!A.p || !(A.p.treinos || []).length) return notReady();
+    if (!A.p || !(A.p.treinos || []).length) {
+      if (A.p && A.p.autoEdit) {
+        V().innerHTML = `<div class="empty" style="padding:32px 20px;text-align:center"><h2 style="margin-bottom:12px">Nenhum treino ainda</h2><p style="margin-bottom:24px;color:var(--sub)">Monte os seus treinos e a semana aqui.</p><a class="btn" href="#e-${esc(S0)}-${esc(P)}" onclick="setTimeout(()=>location.reload(),30)">Montar meus treinos</a></div>`;
+        return;
+      }
+      return notReady();
+    }
     if (A.selDate && A.selDate !== todayISO()) return dayView(parseISO(A.selDate));
     const tr = A.p.treinos, dow = new Date().getDay(), sem = temSemana(A.p);
     const hoje = sem ? diaDe(A.p, dow) : [{ id: "x", tipo: "treino", treinoId: "auto" }];
