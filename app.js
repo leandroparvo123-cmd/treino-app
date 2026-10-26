@@ -1688,7 +1688,16 @@ function startAluno(S0, P) {
   function runSave() { const t = A.p && A.p.treinos && A.p.treinos[A.tIdx]; if (t) ls.set("al.run." + P, { d: todayISO(), tid: t.id, ex: A.exIdx || 0, fd: A.forDate || null, so: !!A.savedOnce }); }
   function runClear() { ls.set("al.run." + P, null); }
   function runGet() {
-    const r = ls.get("al.run." + P, null); if (!r || !A.p) return null;
+    if (!A.p) return null;
+    let r = ls.get("al.run." + P, null);
+    if (!r) {
+      // treino começado na versão antiga: acha o treino pelas séries marcadas ou cargas digitadas
+      const ids = new Set([...Object.keys(A.marks || {}).filter((k) => (A.marks[k] || []).some(Boolean)), ...Object.keys(A.inputs || {})]);
+      if (!ids.size) return null;
+      const t = (A.p.treinos || []).find((t) => t.exercicios.some((ex) => ids.has(ex.id) || ids.has(curEx(ex).id)));
+      if (!t) return null;
+      r = { d: todayISO(), tid: t.id, ex: 0, fd: null, so: false }; ls.set("al.run." + P, r);
+    }
     if (r.d !== todayISO()) { runClear(); return null; }
     const idx = (A.p.treinos || []).findIndex((t) => t.id === r.tid); if (idx < 0) { runClear(); return null; }
     const marcou = Object.values(A.marks || {}).some((m) => (m || []).some(Boolean)), digitou = Object.keys(A.inputs || {}).length > 0;
