@@ -425,5 +425,5 @@
       frames: [{ P: [0, 0.98, -0.05], T: -14, HP: [8, 12], K: 10, S: [20, 30], E: 120 }, { P: [0, 0.56, -0.3], T: -14, HP: [90, 14], K: 104, S: [20, 30], E: 120 }] },
   };
   // nomes da biblioteca que reaproveitam movimentos
-  window.FIG3D = { draw, ANIM3, solve, expand, has: (n) => !!ANIM3[n] };
+  window.FIG3D = { draw, propPrims, ANIM3, solve, expand, mix, camera, boundsOf, PAL, CACHE, B, mm, mv, Rx, Ry, Rz, norm, cross, sub, add, mul, dot, has: (n) => !!ANIM3[n] };
 })();

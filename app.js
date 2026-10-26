@@ -283,7 +283,15 @@ function anim3d(c) { const F = window.FIG3D; if (!F) return null; const lb = c.d
 function paint(c, t) {
   const ctx = c.getContext("2d"); ctx.setTransform(c._dpr, 0, 0, c._dpr, 0, 0);
   const a3 = anim3d(c);
-  if (a3) { window.FIG3D.draw(ctx, a3, c._w < 150 ? 1.3 : t, c._w, c._h, theme3d()); c._static = c._w < 150; return; }
+  if (a3) {
+    const tt = c._w < 150 ? 1.3 : t; if (c._w < 150) c._static = true;
+    const t0 = performance.now();
+    if (!(window.FIG3DGL && window.FIG3DGL.draw(ctx, a3, tt, c._w, c._h, theme3d(), c._dpr))) window.FIG3D.draw(ctx, a3, tt, c._w, c._h, theme3d());
+    // aparelho lento: o boneco para em vez de travar a tela
+    const dt = performance.now() - t0; c._ms = c._ms == null ? dt : c._ms * 0.8 + dt * 0.2; c._n = (c._n || 0) + 1;
+    if (c._n > 6 && c._ms > 45) c._static = true;
+    return;
+  }
   if (!COL) readCols();
   drawFig(ctx, c.dataset.anim, t, COL, c._w, c._h);
 }
