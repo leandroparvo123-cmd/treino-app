@@ -657,6 +657,25 @@ function streakDias(sess) {
 }
 
 // ============================================================
+//  Temas de cores (aluno e personal)
+// ============================================================
+const TEMAS = [
+  { id: "escuro", nome: "Escuro", light: false, cols: ["#0B0D0F", "#C8F31D", "#FF5C8A", "#3DD6F5"], meta: "#0B0D0F" },
+  { id: "claro", nome: "Claro", light: true, cols: ["#F3F4EF", "#C8F31D", "#E8457A", "#1AA7CC"], meta: "#F3F4EF" },
+  { id: "oceano", nome: "Oceano", light: false, cols: ["#071422", "#22D3EE", "#FF6B9A", "#FFC23D"], meta: "#071422" },
+  { id: "brasa", nome: "Brasa", light: false, cols: ["#130B09", "#FF6B2C", "#FFC93D", "#3DD6F5"], meta: "#130B09" },
+  { id: "roxo", nome: "Roxo", light: false, cols: ["#0E0918", "#D08CFF", "#4ADE80", "#FFE14D"], meta: "#0E0918" },
+  { id: "areia", nome: "Areia", light: true, cols: ["#F5EFE6", "#E2552B", "#6D4ED8", "#0E9FB8"], meta: "#F5EFE6" },
+];
+function aplicarTema(id) {
+  const t = TEMAS.find((x) => x.id === id) || TEMAS[0], root = document.documentElement, before = root.className;
+  root.classList.add("sport"); root.classList.toggle("light", t.light);
+  TEMAS.forEach((x) => root.classList.toggle("t-" + x.id, x.id === t.id && !["escuro", "claro"].includes(x.id)));
+  if (root.className !== before) { readCols(); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.meta; }
+}
+const temasHtml = (cur, attr) => `<div class="themes" role="group" aria-label="Cores do app">${TEMAS.map((t) => `<button data-${attr}="${t.id}" aria-pressed="${t.id === cur}"><span class="sw3">${t.cols.map((c) => `<i style="background:${c}"></i>`).join("")}</span>${t.nome}</button>`).join("")}</div>`;
+
+// ============================================================
 //  Versões de treino (correção feita pelo aluno vira uma nova versão)
 // ============================================================
 function vivas(list) { const sub = new Set(list.map((s) => s.substitui).filter(Boolean)); return list.filter((s) => !sub.has(s.id) && s.tipo !== "apagado"); }
@@ -809,7 +828,7 @@ function shiftMonth(m, delta) { const n = new Date(); const b = m || [n.getFullY
 // ============================================================
 function startAdmin(S0, K0, ONLY) {
   show("#admin");
-  document.documentElement.classList.add("sport"); readCols();
+  document.documentElement.classList.add("sport"); aplicarTema(ls.get("ct.theme", "escuro")); readCols();
   if (DEMO && !ONLY) { const b = $("#banner"); b.hidden = false; b.innerHTML = 'Demonstração: nada aqui é salvo de verdade. <a href="?demo#p-demo-pai">Ver como o aluno vê</a>.'; }
   const PLATES = ["--p1", "--p2", "--p3", "--p4", "--p5"];
   const RESTS = ["30s", "45s", "60s", "90s", "2 min", "3 min"];
@@ -1066,6 +1085,7 @@ function startAdmin(S0, K0, ONLY) {
         <div class="field"><label class="label" for="pn-aviso">Recado no início do treino</label><input id="pn-aviso" class="txt" data-edit="aviso" value="${esc(p.aviso || "")}" placeholder="Ex.: Beba água e pare se sentir tontura"></div>
         ${ONLY ? "" : `<button class="btn danger" data-act="del-person" data-arm="p-${esc(p.id)}">Remover ${esc(p.nome)} e o histórico</button>`}
       </div>
+      <div class="sheet"><h3>Cores do app</h3>${temasHtml(ls.get("ct.theme", "escuro"), "atheme")}</div>
       ${ONLY ? "" : `<div class="sheet"><h3>Seu link de personal</h3><p class="sub" style="margin:0">Use pra abrir o caderno em outro aparelho. Não mande pra ninguém.</p><div class="linkbox">${esc(adminLink(S0, K0))}</div><div class="row"><button class="btn ghost sm" data-copy="${esc(adminLink(S0, K0))}">Copiar meu link</button><button class="btn ghost sm" data-qr="${esc(adminLink(S0, K0))}">Mostrar QR code</button></div><div class="qrbox" hidden></div></div>`}
     </div>`;
   }
@@ -1160,6 +1180,7 @@ function startAdmin(S0, K0, ONLY) {
     if (b.dataset.tab) { S.tab = b.dataset.tab; ls.set("ct.tab", S.tab); render(); return; }
     if (b.dataset.treino) { S.treinoSel[S.pid] = b.dataset.treino; render(); return; }
     if (b.dataset.rest) { startTimer(+b.dataset.rest, b.dataset.exnome); return; }
+    if (b.dataset.atheme && !$("#admin").hidden) { ls.set("ct.theme", b.dataset.atheme); aplicarTema(b.dataset.atheme); const y = window.scrollY; render(); window.scrollTo(0, y); return; }
     if (b.dataset.axsel && !$("#admin").hidden) { S.xsel = b.dataset.axsel; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
     if (b.dataset.calday && !$("#admin").hidden) { S.calDay = S.calDay === b.dataset.calday ? null : b.dataset.calday; render(); return; }
     if (b.dataset.actCal) { S.calMonth = shiftMonth(S.calMonth, b.dataset.actCal === "next" ? 1 : -1); render(); return; }
@@ -1419,7 +1440,7 @@ function startAluno(S0, P) {
   let wake = null;
   const SUN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>', MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
   const themeMode = () => ls.get("al.theme", null) || (simples() ? "claro" : "escuro");
-  const themeBtn = () => `<button class="themebtn" data-theme-toggle aria-label="Mudar para aparência ${themeMode() === "escuro" ? "clara" : "escura"}">${themeMode() === "escuro" ? SUN : MOON}</button>`;
+  const themeBtn = () => { const lt = (TEMAS.find((x) => x.id === themeMode()) || {}).light; return `<button class="themebtn" data-theme-toggle aria-label="Mudar para aparência ${lt ? "escura" : "clara"}">${lt ? MOON : SUN}</button>`; };
 
   $("#aluno").innerHTML = `<div id="aview"></div>
     <nav class="tabbar" id="atabs" aria-label="Seções">
@@ -1713,7 +1734,7 @@ function startAluno(S0, P) {
       ${last ? `<h2>Peso</h2><div class="sheet">${weightChart(av)}<p class="sub" style="margin:0">Última medida: <b>${fmtN(last.peso)} kg</b> em ${fmtDateY(last.data)}${firstW && firstW !== last ? ` · ${last.peso - firstW.peso > 0 ? "+" : ""}${fmtN(last.peso - firstW.peso)} kg desde ${fmtDateY(firstW.data)}` : ""}</p></div>` : ""}
       <h2>Treinos feitos</h2><p class="a-muted" style="font-size:.8em;margin:-8px 0 0">Toque num treino pra ver ou corrigir.</p><div class="scards">${sess || '<p class="a-muted">Seus treinos vão aparecer aqui.</p>'}</div>
       <h2>Aparência</h2>
-      <div class="seg" role="group" aria-label="Aparência"><button data-theme-set="escuro" aria-pressed="${themeMode() === "escuro"}">${MOON}Escuro</button><button data-theme-set="claro" aria-pressed="${themeMode() === "claro"}">${SUN}Claro</button></div>`;
+      ${temasHtml(themeMode(), "theme-set")}`;
   }
 
   function exercise() {
@@ -1823,10 +1844,7 @@ function startAluno(S0, P) {
 
   function applyTheme() {
     if (!A.p && !ls.get("al.theme", null)) return;
-    const root = document.documentElement, light = themeMode() === "claro";
-    const before = root.className;
-    root.classList.add("sport"); root.classList.toggle("light", light);
-    if (root.className !== before) { readCols(); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = light ? "#F3F4EF" : "#0B0D0F"; }
+    aplicarTema(themeMode());
   }
   function render() {
     $("#aluno").classList.toggle("simples", simples()); document.body.classList.toggle("simples-on", simples());
@@ -1909,7 +1927,7 @@ function startAluno(S0, P) {
   document.addEventListener("click", (e) => {
     if ($("#aluno").hidden) return;
     const b = e.target.closest("button"); if (!b) return;
-    if (b.hasAttribute("data-theme-toggle")) { ls.set("al.theme", themeMode() === "escuro" ? "claro" : "escuro"); render(); return; }
+    if (b.hasAttribute("data-theme-toggle")) { const t = TEMAS.find((x) => x.id === themeMode()); ls.set("al.theme", t && t.light ? "escuro" : "claro"); render(); return; }
     if (b.dataset.themeSet) { ls.set("al.theme", b.dataset.themeSet); render(); return; }
     if (b.dataset.atab) { A.tab = b.dataset.atab; ls.set("al.tab." + P, A.tab); window.scrollTo(0, 0); render(); return; }
     if (b.dataset.acal) { A.calMonth = shiftMonth(A.calMonth, b.dataset.acal === "next" ? 1 : -1); render(); return; }

@@ -1075,6 +1075,35 @@ html.sport.light .s2.higher .s2-warn { color: #3c7d00; }
 .editme svg { width: 28px; height: 28px; color: var(--accent); justify-self: center; }
 .editme span { display: flex; flex-direction: column; } .editme b { font-size: 16px; } .editme small { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .editme i { font-style: normal; font-size: 22px; color: var(--muted); }
+
+/* ---------- temas de cores ---------- */
+:root.sport.t-oceano:not([data-x]) {
+  --bg: #071422; --surface: #0E2134; --surface-2: #15304A; --ink: #EAF4FF; --muted: #8FA8C0; --line: #1F3D5C;
+  --accent: #22D3EE; --accent-ink: #04121C; --good: #22D3EE; --good-bg: #0B3442; --go: #22D3EE; --ink-accent: #22D3EE;
+  --p1: #FF6B9A; --p2: #FF9F43; --p3: #A78BFA; --p4: #4ADE80; --cardio: #FFC23D; --tabbar: rgba(7,20,34,.93); --stage: #0B1A2A;
+}
+:root.sport.t-brasa:not([data-x]) {
+  --bg: #130B09; --surface: #22140F; --surface-2: #301C16; --ink: #FFF3EC; --muted: #B59C90; --line: #42291F;
+  --accent: #FF6B2C; --accent-ink: #1A0A05; --good: #FF6B2C; --good-bg: #3A1A0C; --go: #FF6B2C; --ink-accent: #FF8A50;
+  --p1: #FF4D7A; --p2: #FFC93D; --p3: #B39CFF; --p4: #5EEAD4; --cardio: #3DD6F5; --tabbar: rgba(19,11,9,.93); --stage: #1A100C;
+}
+:root.sport.t-roxo:not([data-x]) {
+  --bg: #0E0918; --surface: #191127; --surface-2: #241936; --ink: #F5F0FF; --muted: #A497C2; --line: #34264E;
+  --accent: #D08CFF; --accent-ink: #14081F; --good: #D08CFF; --good-bg: #2E1A45; --go: #D08CFF; --ink-accent: #D08CFF;
+  --p1: #FF5C8A; --p2: #FFB23D; --p3: #4ADE80; --p4: #22D3EE; --cardio: #FFE14D; --tabbar: rgba(14,9,24,.93); --stage: #130D20;
+}
+:root.sport.light.t-areia:not([data-x]) {
+  --bg: #F5EFE6; --surface: #FFFDF9; --surface-2: #EEE5D8; --ink: #2A2019; --muted: #7A6A5C; --line: #E1D5C4;
+  --accent: #E2552B; --accent-ink: #FFFFFF; --good: #E2552B; --good-bg: #FBE3D8; --go: #E2552B; --go-ink: #FFFFFF; --ink-accent: #B83E17;
+  --p1: #D9366B; --p2: #D88400; --p3: #6D4ED8; --p4: #2E9E5B; --cardio: #0E9FB8; --tabbar: rgba(255,253,249,.95); --stage: #FFFDF9;
+}
+html.sport.light.t-areia .tabbar .tab[aria-selected="true"] svg { background: rgba(226,85,43,.18); }
+html.sport.t-areia .seg > .on, html.sport.t-areia .seg > button[aria-pressed="true"], html.sport.t-areia .setok[aria-pressed="true"], html.sport.t-areia .rb-next { color: #fff; }
+.themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.themes button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 800; }
+.themes button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.themes .sw3 { display: flex; width: 100%; height: 26px; border-radius: 2px; overflow: hidden; border: 1px solid rgba(127,127,127,.25); }
+.themes .sw3 i { flex: 1; }
 </style>
 </head>
 <body>
