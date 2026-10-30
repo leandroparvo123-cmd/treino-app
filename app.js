@@ -495,6 +495,36 @@ const FICHAS = {
       6: [{ tipo: "cardio", nome: "Caminhada leve (se tiver vontade)", nivel: "leve", min: 35, momento: "Livre" }],
     },
   },
+  pai3x: {
+    nome: "Iniciante+ 60+ · 3x (Seg, Qua e Sáb) + esteira",
+    desc: "Mantém o Treino A e o B que ele já faz e acrescenta o Treino C no sábado de manhã: quadril firme, postura e abdômen. Esteira na terça e caminhada na quinta.",
+    objetivo: "Força, equilíbrio e disposição",
+    obs: "Carga em que sobram só 2 ou 3 repetições, sempre com a postura certa. Respire o tempo todo, sem prender o ar. Fez 12 com facilidade nas 3 séries? Sobe um pouquinho a carga. Tontura, falta de ar forte ou dor no peito: para e avisa.",
+    semanas: 8,
+    manter: ["Treino A", "Treino B"],
+    treinos: [
+      null,
+      null,
+      { nome: "Treino C", ex: [
+        E("legpress", 1, 0, 3, "10–12", "90s", null, ["Sentar e levantar da cadeira", "Cadeira extensora"]),
+        E("abdutora", 0, 0, 2, "12–15", "60s", null, ["Caminhada lateral com apoio"]),
+        E("supinoincmaq", 0, 0, 2, "10–12", "90s", null, ["Supino na máquina (sentado)", "Supino inclinado com halteres"]),
+        E("remadabaixa", 0, 0, 3, "10–12", "90s", null, ["Remada sentada na máquina", "Puxada frente"]),
+        E("crucinverso", 0, 0, 2, "12–15", "60s", null, ["Face pull", "Crucifixo inverso com halteres"]),
+        E("prancha", 0, 0, 2, "20–30 s", "45s", "Prancha inclinada (mãos no banco)", ["Abdominal na polia"]),
+        E("marcha", 0, 0, 2, "20 passos", "30s", "Marcha no lugar (joelho alto, mão perto do apoio)", ["Equilíbrio num pé só (com apoio)"]),
+      ] },
+    ],
+    semana: {
+      0: [],
+      1: [{ tipo: "treino", idx: 0, momento: "Noite" }],
+      2: [{ tipo: "cardio", nome: "Esteira moderada", nivel: "moderado", min: 30, momento: "Noite", desc: "5 min devagar, depois passo firme. Pode usar 1 a 2% de inclinação." }],
+      3: [{ tipo: "treino", idx: 1, momento: "Noite" }],
+      4: [{ tipo: "cardio", nome: "Caminhada leve (se tiver vontade)", nivel: "leve", min: 30, momento: "Livre" }],
+      5: [],
+      6: [{ tipo: "treino", idx: 2, momento: "Manhã" }],
+    },
+  },
   full3x: {
     nome: "Fullbody máquinas · 3x (Seg, Qua, Sáb) + bike",
     desc: "ABC uma vez por semana, com 3 válidas nos principais. Sexta no almoço: bike ou Treino D curto (sem perna). Intervalado na quinta.",
@@ -630,7 +660,12 @@ const FICHAS = {
 };
 function aplicarFicha(p, key) {
   const F = FICHAS[key]; if (!F) return;
-  p.treinos = F.treinos.map((t) => ({ id: rnd(8), nome: t.nome, exercicios: t.ex.map((e) => ({ id: rnd(8), ...e })) }));
+  const novo = (t) => ({ id: rnd(8), nome: t.nome, exercicios: t.ex.map((e) => ({ id: rnd(8), ...e })) });
+  const base = F.manter ? FICHAS[F.base || "pai2x"].treinos : null;
+  p.treinos = F.treinos.map((t, i) => {
+    if (!t) { const atual = (p.treinos || []).find((x) => x.nome === F.manter[i]); return atual || novo(base[i]); } // mantém o treino que a pessoa já tem
+    return novo(t);
+  });
   p.semana = {};
   for (let d = 0; d < 7; d++) p.semana[d] = (F.semana[d] || []).map((it) => it.tipo === "cardio" ? { id: rnd(6), tipo: "cardio", nome: it.nome, min: it.min, momento: it.momento, ...(it.nivel ? { nivel: it.nivel } : {}), ...(it.desc ? { desc: it.desc } : {}) } : { id: rnd(6), tipo: "treino", treinoId: it.idx === "auto" ? "auto" : p.treinos[it.idx].id, momento: it.momento });
   const ini = todayISO();
@@ -1077,7 +1112,7 @@ function startAdmin(S0, K0, ONLY) {
       ${cards || `<div class="empty"><b>Nenhum treino ainda</b>Crie do zero ou copie os treinos de outra pessoa e ajuste.</div>`}
       <button class="btn ghost" data-act="add-treino">+ Novo treino</button>
       <details class="sheet fichas"><summary><b>Fichas prontas</b><span>Troca os treinos e a semana de ${esc(p.nome)}</span></summary>
-        ${Object.entries(FICHAS).map(([k, F]) => `<div class="fpr"><div><b>${esc(F.nome)}</b><p>${esc(F.desc)}</p><p class="fpr-l">${F.treinos.map((t) => esc(t.nome)).join(" · ")}</p></div><button class="btn sm" data-act="ficha-pronta" data-f="${k}" data-arm="fp-${k}">Usar esta ficha</button></div>`).join("")}
+        ${Object.entries(FICHAS).map(([k, F]) => `<div class="fpr"><div><b>${esc(F.nome)}</b><p>${esc(F.desc)}</p><p class="fpr-l">${F.treinos.map((t, i) => esc(t ? t.nome : F.manter[i] + " (o atual)")).join(" · ")}</p></div><button class="btn sm" data-act="ficha-pronta" data-f="${k}" data-arm="fp-${k}">Usar esta ficha</button></div>`).join("")}
         <p class="hint">O histórico de cargas continua guardado.</p>
       </details>
       ${others.length && !ONLY ? `<div class="sheet"><div class="label">Copiar de outra pessoa</div><div class="row">${others.map((o) => `<button class="btn ghost" data-act="copy-from" data-from="${esc(o.id)}">Copiar de ${esc(o.nome)}</button>`).join("")}</div></div>` : ""}
