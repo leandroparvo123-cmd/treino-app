@@ -896,7 +896,7 @@ function startAdmin(S0, K0, ONLY) {
   const saveTimers = {};
   function savePessoa(p, now) {
     clearTimeout(saveTimers[p.id]);
-    const go = () => { try { return B.set("pessoas", p.id, JSON.parse(JSON.stringify({ nome: p.nome || "", ordem: p.ordem || 0, simples: !!p.simples, aviso: p.aviso || "", ficha: p.ficha || {}, semana: p.semana || {}, treinos: p.treinos || [], autoEdit: !!p.autoEdit }))).catch(writeErr); } catch (e) { writeErr(e); } };
+    const go = () => { try { return B.set("pessoas", p.id, JSON.parse(JSON.stringify({ nome: p.nome || "", ordem: p.ordem || 0, simples: !!p.simples, aviso: p.aviso || "", ficha: p.ficha || {}, semana: p.semana || {}, treinos: p.treinos || [], autoEdit: !!p.autoEdit, ...(p.academias != null ? { academias: !!p.academias } : {}) }))).catch(writeErr); } catch (e) { writeErr(e); } };
     if (now) return go();
     saveTimers[p.id] = setTimeout(go, 700);
   }
@@ -1107,6 +1107,7 @@ function startAdmin(S0, K0, ONLY) {
           <input id="pn-nome" class="txt pn-nome" data-edit="pnome" value="${esc(p.nome)}" maxlength="30" aria-label="Nome do perfil" placeholder="Nome">
           ${ONLY ? "" : `<label class="sw" for="pn-simples" title="Letras grandes e só marcar séries, sem anotar carga"><input type="checkbox" id="pn-simples" data-edit="simples"${p.simples ? " checked" : ""}><span>Modo simples</span></label>`}</div>
         ${ONLY ? "" : `<label class="sw sw-line" for="pn-auto"><input type="checkbox" id="pn-auto" data-edit="autoEdit"${p.autoEdit ? " checked" : ""}><span>Perfil personal</span><small>${p.autoEdit ? "Pode editar os próprios treinos pelo link dele. Não cria nem vê outros perfis." : "Ligue pra pessoa montar e editar os próprios treinos pelo link dela."}</small></label>`}
+        ${ONLY ? "" : `<label class="sw sw-line" for="pn-gym"><input type="checkbox" id="pn-gym" data-edit="academias"${p.academias ? " checked" : ""}><span>Treina em mais de uma academia</span><small>${p.academias ? "Escolhe a academia ao começar. A carga sugerida nas máquinas vem só da mesma academia." : "Ligue se a pessoa treina em academias diferentes: as máquinas não pesam igual de uma pra outra."}</small></label>`}
         ${ONLY ? "" : `<div class="plink"><span class="label">Link do aluno</span>
           <div class="seg"><a target="_blank" rel="noopener" href="${esc(link)}">Abrir</a><button data-copy="${esc(link)}">Copiar</button><a target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent("Esse é o seu treino. Toque no link pra abrir: " + link)}">WhatsApp</a><button data-qr="${esc(link)}">QR</button></div>
           <div class="qrbox" hidden></div></div>`}
@@ -1390,7 +1391,7 @@ function startAdmin(S0, K0, ONLY) {
     const kind = el.dataset.edit; if (!kind) return;
     if (kind.startsWith("f-")) { p.ficha = p.ficha || {}; p.ficha[kind.slice(2)] = el.value; savePessoa(p); return; }
     if (kind === "pnome") { p.nome = el.value.trim() || "Sem nome"; renderPeople(); savePessoa(p); return; }
-    if (kind === "simples" || kind === "autoEdit") return;
+    if (kind === "simples" || kind === "autoEdit" || kind === "academias") return;
     if (kind === "aviso") { p.aviso = el.value; savePessoa(p); return; }
     if (kind === "sem") {
       const d = +el.closest("[data-day]").dataset.day, iid = el.closest("[data-iid]").dataset.iid, it = diaDe(p, d).find((x) => x.id === iid); if (!it) return;
@@ -1412,6 +1413,7 @@ function startAdmin(S0, K0, ONLY) {
     const k = e.target.dataset.edit;
     if (k === "descanso" || k === "f-inicio" || k === "f-troca" || (k === "sem" && e.target.tagName === "SELECT")) e.target.dispatchEvent(new Event("input", { bubbles: true }));
     if (k === "simples") { const p = pessoa(); if (!p) return; p.simples = e.target.checked; savePessoa(p, true); render(); }
+    if (k === "academias") { const p = pessoa(); if (!p) return; p.academias = e.target.checked; savePessoa(p, true); render(); toast(p.academias ? "Mais de uma academia: ligado" : "Mais de uma academia: desligado"); }
     if (k === "autoEdit") { const p = pessoa(); if (!p) return; p.autoEdit = e.target.checked; savePessoa(p, true); render(); toast(p.autoEdit ? "Perfil personal ligado" : "Perfil personal desligado"); }
   });
   $("#np-cancel").addEventListener("click", () => { S.newPerson = false; renderPeople(); });
@@ -1482,6 +1484,18 @@ function startAluno(S0, P) {
   const dose = (ex) => doseTxt(ex);
   const nSetsOf = (ex) => planoSeries(ex).length;
   const simples = () => !!(A.p && A.p.simples);
+  // várias academias: a carga das máquinas é comparada só dentro da mesma academia
+  const MAQ = new Set(["legpress", "extensora", "flexora", "mesaflexora", "abdutora", "supinomaq", "remadamaq", "remadabaixa", "puxada", "voador", "supinoincmaq", "hack", "desenvmaq", "roscamaq", "crucinverso", "pantsentado", "triceps", "facepull", "abdpolia", "francespolia", "panturrilha"]);
+  const gymOn = () => !!(A.p && A.p.academias);
+  const gymAtual = () => (gymOn() ? ls.get("al.gym." + P, "") : "");
+  const gymList = () => { const l = ls.get("al.gyms." + P, []); (A.sessRaw || A.sess || []).forEach((x) => { if (x.academia && !l.includes(x.academia)) l.push(x.academia); }); return l; };
+  const ehMaquina = (ex) => { const c = curEx(ex); return MAQ.has(c.lib) || /m[áa]quina|polia|cadeira|mesa|leg ?press|hack|smith|crossover|voador|puxada|cabo|articulad/i.test(c.nome || ""); };
+  function gymPick() {
+    if (!gymOn()) return "";
+    const g = gymAtual(), l = gymList();
+    return `<div class="gym-pick"><div class="label" style="margin:2px 0 6px;color:inherit;opacity:.8">Academia de hoje</div><div class="pick">${l.map((x) => `<button data-gym="${esc(x)}" aria-pressed="${x === g}">${esc(x)}</button>`).join("")}<button data-gymnew aria-pressed="false">+ Nova</button></div>
+      <div class="gym-new row" ${l.length ? "hidden" : ""} style="margin-top:8px;gap:8px"><input id="gym-nome" class="txt" maxlength="30" placeholder="Nome da academia" style="flex:1"><button class="btn sm" data-gymadd>Salvar</button></div></div>`;
+  }
   const nomeCurto = () => { const n = (A.p && A.p.nome) || ""; return n && !/^(pai|mãe|mae|eu)$/i.test(n) ? n.split(" ")[0] : ""; };
   let wake = null;
   const SUN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>', MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
@@ -1505,7 +1519,8 @@ function startAluno(S0, P) {
     const i = tr.findIndex((t) => t.id === last.treinoId); return i < 0 ? 0 : (i + 1) % tr.length;
   }
   function lastFor(ex) {
-    for (const s of A.sess) { const it = s.itens && (s.itens[ex.id] || Object.values(s.itens).find((x) => x.nome === exNome(ex)) || (ex.lib ? Object.values(s.itens).find((x) => x.lib === ex.lib) : null)); if (it && (it.carga != null || it.reps != null || it.feitas || it.obs)) return { ...it, data: s.data }; }
+    const g = gymAtual(), filtra = g && ehMaquina(ex);
+    for (const s of A.sess) { if (filtra && s.academia && s.academia !== g) continue; const it = s.itens && (s.itens[ex.id] || Object.values(s.itens).find((x) => x.nome === exNome(ex)) || (ex.lib ? Object.values(s.itens).find((x) => x.lib === ex.lib) : null)); if (it && (it.carga != null || it.reps != null || it.feitas || it.obs)) return { ...it, data: s.data }; }
     return null;
   }
   function weekDots() {
@@ -1698,6 +1713,7 @@ function startAluno(S0, P) {
         ${showTreino ? `<div class="a-card"><p><b>${t.exercicios.length} exercícios</b> · mais ou menos 35 minutos</p>
           ${exRows(t, A.tIdx)}</div>
           ${A.p.aviso ? `<div class="a-note">${esc(A.p.aviso)}</div>` : ""}
+          ${gymPick()}
           <button class="a-big" data-go="start">${didT ? "Treinar de novo" : "Começar o treino"}</button>
           ${other ? `<button class="a-link" data-go="swap">Prefiro fazer o ${esc(other.nome)} hoje</button>` : ""}`
         : `<div class="a-card"><p>${cItems.length ? "Hoje não tem musculação. O cardio já é o treino do dia." : "Descansar também faz parte. Se tiver vontade, um cardio leve de 20 minutos faz bem."}</p></div>
@@ -1712,6 +1728,7 @@ function startAluno(S0, P) {
     const hero = `<section class="hero">
         <div><div class="kicker">${didT ? "Treino de hoje feito" : (tItem && tItem.momento && tItem.momento !== "Livre" ? esc(tItem.momento) + " · " : "") + (tItem || !sem ? "Musculação de hoje" : "Treino extra")}</div><div class="title">${esc(t.nome)}</div><div class="meta2">${t.exercicios.length} exercícios · uns ${Math.max(10, mins)} min${f.objetivo ? " · " + esc(f.objetivo) : ""}</div></div>
         ${pick}
+        ${gymPick()}
         <button class="a-big hero-go" data-go="start">${didT ? "Treinar de novo" : "Começar o treino"}</button>
       </section>`;
     // ordem do dia: o que tem horário mais cedo vem primeiro
@@ -1914,7 +1931,7 @@ function startAluno(S0, P) {
       const antes = {}; statsExercicios(A.sess).forEach((x) => (antes[x.nome] = x.pr.kg));
       const novos = Object.values(itens).filter((it) => it.carga != null && antes[it.nome] != null && it.carga > antes[it.nome]);
       novos.forEach((it) => (it.pr = true));
-      B.set("sessoes", B.newId("sessoes"), { pessoaId: P, treinoId: t.id, treinoNome: t.nome, data: A.forDate || todayISO(), ts: Date.now(), itens, origem: "aluno" }).catch((e) => console.warn(e));
+      B.set("sessoes", B.newId("sessoes"), { pessoaId: P, treinoId: t.id, treinoNome: t.nome, data: A.forDate || todayISO(), ts: Date.now(), itens, origem: "aluno", ...(gymAtual() ? { academia: gymAtual() } : {}) }).catch((e) => console.warn(e));
       A.novosPR = novos.map((it) => `${it.nome} ${fmtN(it.carga)} kg`); A.forDate = null;
     }
     const mc = Math.max(monthCount(), any ? 1 : 0);
@@ -2021,6 +2038,13 @@ function startAluno(S0, P) {
     if (b.dataset.atab) { A.tab = b.dataset.atab; ls.set("al.tab." + P, A.tab); window.scrollTo(0, 0); render(); return; }
     if (b.dataset.acal) { A.calMonth = shiftMonth(A.calMonth, b.dataset.acal === "next" ? 1 : -1); render(); return; }
     if (b.dataset.apick != null) { A.tIdx = +b.dataset.apick; render(); return; }
+    if (b.dataset.gym != null) { ls.set("al.gym." + P, b.dataset.gym); render(); return; }
+    if (b.hasAttribute("data-gymnew")) { const box = V().querySelector(".gym-new"); if (box) { box.hidden = false; const i = box.querySelector("input"); i && i.focus(); } return; }
+    if (b.hasAttribute("data-gymadd")) {
+      const i = V().querySelector("#gym-nome"), nome = ((i && i.value) || "").trim().slice(0, 30); if (!nome) { i && i.focus(); return; }
+      const l = ls.get("al.gyms." + P, []); if (!l.includes(nome)) l.push(nome); ls.set("al.gyms." + P, l); ls.set("al.gym." + P, nome); render(); toast("Academia salva: " + nome); return;
+    }
+    if ((b.dataset.dostart != null || b.dataset.go === "start") && gymOn() && !gymAtual()) { toast("Escolha em qual academia você está hoje", true); const gp = V().querySelector(".gym-pick"); if (gp) gp.scrollIntoView({ block: "center", behavior: "smooth" }); else { A.tIdx = b.dataset.dostart != null ? +b.dataset.dostart : A.tIdx; A.screen = "home"; render(); } return; }
     if (b.dataset.wday) { A.selDate = b.dataset.wday === todayISO() ? null : b.dataset.wday; window.scrollTo(0, 0); render(); return; }
     if (b.dataset.dostart != null) { A.forDate = b.dataset.fordate || null; A.tIdx = +b.dataset.dostart; A.selDate = null; A.screen = "ex"; A.exIdx = 0; A.marks = {}; A.inputs = {}; A.swap = {}; ls.set("al.swap." + P, {}); A.savedOnce = false; ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); if (b.dataset.at != null) A.exIdx = +b.dataset.at; keepAwake(); render(); return; }
     if (b.dataset.cardio) {
@@ -2078,7 +2102,20 @@ function startAluno(S0, P) {
     else if (go === "ed-save") saveEdit();
     else if (go === "ed-del") { if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Toque de novo pra apagar"; return; } delEdit(); }
     else if (go === "ed-cancel") { A.edit = null; A.screen = "home"; render(); }
-    else if (go === "quit") { A.screen = "end"; endRest(); render(); }
+    else if (go === "quit") {
+      if (V().querySelector(".quit-sheet")) return;
+      V().insertAdjacentHTML("beforeend", `<div class="quit-sheet" role="dialog" aria-label="Sair do treino" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding:16px">
+        <div class="a-card" style="width:100%;max-width:520px;display:flex;flex-direction:column;gap:10px;padding:20px">
+          <h2 style="margin:0">Sair do treino?</h2>
+          <p class="a-muted" style="margin:0 0 4px">Pausando, fica tudo salvo e você continua depois de onde parou.</p>
+          <button class="a-big" data-go="pause">Pausar e continuar depois</button>
+          <button class="a-big soft" data-go="endnow">Terminar e salvar o que fiz</button>
+          <button class="a-link" data-go="quitno">Voltar pro treino</button>
+        </div></div>`);
+    }
+    else if (go === "quitno") { const q = V().querySelector(".quit-sheet"); if (q) q.remove(); }
+    else if (go === "pause") { runSave(); endRest(); releaseWake(); A.screen = "home"; window.scrollTo(0, 0); render(); toast("Treino pausado. Está tudo salvo."); }
+    else if (go === "endnow") { A.screen = "end"; endRest(); render(); }
     else if (go === "resume") { const r = runGet(); if (!r) { render(); return; } A.tIdx = r.idx; A.exIdx = Math.min(r.ex || 0, A.p.treinos[r.idx].exercicios.length - 1); A.forDate = r.fd || null; A.savedOnce = !!r.so; A.selDate = null; A.screen = "ex"; keepAwake(); render(); }
     else if (go === "fresh") { if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Toque de novo pra apagar o que marcou"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "Começar do zero"; } }, 4000); return; } runClear(); A.marks = {}; A.inputs = {}; A.swap = {}; ls.set("al.swap." + P, {}); ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); A.exIdx = 0; render(); toast("Pronto, pode começar do zero"); }
     else if (go === "home") { A.screen = "home"; A.tIdx = null; A.marks = {}; A.inputs = {}; A.swap = {}; ls.set("al.swap." + P, {}); ls.set("al.marks." + P, {}); ls.set("al.inputs." + P, {}); render(); }
