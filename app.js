@@ -540,26 +540,29 @@ const FICHAS = {
         E("desenvmaq", 0, 1, 2, "8–12", "90s", null, ["Desenvolvimento com halteres", "Desenvolvimento no Smith"]),
         E("triceps", 0, 0, 2, "10–15", "60s", "Tríceps corda", ["Tríceps na máquina", "Tríceps na polia"]),
         E("roscamaq", 0, 0, 2, "10–15", "60s", null, ["Rosca na polia", "Rosca com halteres sentado"]),
+        E("prancha", 0, 0, 2, "30–45 s", "45s"),
       ] },
       { nome: "Treino B · Posterior + puxar", ex: [
         E("mesaflexora", 1, 1, 3, "8–12", "2 min", null, ["Cadeira flexora (sentado)", "Stiff com halteres"]),
-        E("extensora", 0, 1, 2, "10–15", "90s"),
+        E("extensora", 0, 1, 3, "10–15", "90s"),
         E("remadamaq", 1, 1, 3, "8–12", "2 min", null, ["Remada baixa", "Remada unilateral"]),
         E("voador", 0, 1, 3, "10–15", "90s", null, ["Crossover na polia", "Crucifixo com halteres"]),
-        E("elevacao", 0, 0, 2, "12–15", "60s", null, ["Elevação lateral na polia", "Elevação lateral na máquina"]),
+        E("elevacao", 0, 0, 3, "12–15", "60s", null, ["Elevação lateral na polia", "Elevação lateral na máquina"]),
         E("roscasentado", 0, 0, 2, "10–12", "60s", null, ["Rosca na polia", "Rosca na máquina"]),
         E("francespolia", 0, 0, 2, "10–15", "60s", null, ["Tríceps na máquina", "Tríceps na polia"]),
+        E("panturrilha", 0, 0, 2, "12–15", "45s", "Panturrilha em pé (máquina ou leg press)", ["Panturrilha no leg press", "Panturrilha sentado"]),
+        E("abdpolia", 0, 0, 3, "10–15", "60s"),
       ] },
       { nome: "Treino C · Pernas + completo", ex: [
         E("hack", 1, 1, 3, "8–12", "2 min", null, ["Leg press", "Agachamento no Smith"]),
+        E("stiff", 0, 1, 2, "10–12", "90s", null, ["Mesa flexora", "Terra romeno"]),
         E("pantsentado", 0, 0, 2, "12–15", "60s", "Panturrilha na máquina", ["Panturrilha no leg press", "Panturrilha em pé com apoio"]),
         E("supinoincmaq", 0, 1, 3, "8–12", "2 min", null, ["Supino inclinado com halteres", "Supino inclinado no Smith"]),
         E("remadabaixa", 0, 1, 3, "8–12", "90s", null, ["Remada sentada na máquina", "Remada unilateral"]),
-        E("elevacao", 0, 0, 2, "12–15", "60s", null, ["Elevação lateral na polia", "Elevação lateral na máquina"]),
+        E("elevacao", 0, 0, 3, "12–15", "60s", null, ["Elevação lateral na polia", "Elevação lateral na máquina"]),
         E("crucinverso", 0, 0, 2, "12–15", "60s", null, ["Crucifixo inverso com halteres", "Face pull"]),
-        E("martelo", 0, 0, 2, "10–12", "60s", null, ["Rosca na polia", "Rosca com halteres sentado"]),
         E("triceps", 0, 0, 2, "10–15", "60s", null, ["Tríceps na máquina", "Tríceps corda"]),
-        E("abdpolia", 0, 0, 2, "10–15", "60s"),
+        E("pranchalat", 0, 0, 2, "20–30 s cada lado", "30s", null, ["Prancha"]),
       ] },
       { nome: "Treino D · Sexta curto (sem perna)", ex: [
         E("elevacao", 0, 0, 3, "12–15", "60s", null, ["Elevação lateral na polia", "Elevação lateral na máquina"]),
@@ -660,7 +663,15 @@ const FICHAS = {
 };
 function aplicarFicha(p, key) {
   const F = FICHAS[key]; if (!F) return;
-  const novo = (t) => ({ id: rnd(8), nome: t.nome, exercicios: t.ex.map((e) => ({ id: rnd(8), ...e })) });
+  // exercícios que a pessoa já tem: reaproveita o id pra não perder carga e histórico
+  const letra = (n) => ((n || "").match(/Treino\s+([A-Z])\b/) || [])[1] || n;
+  const antigos = (p.treinos || []).flatMap((t) => (t.exercicios || []).map((e) => ({ t: letra(t.nome), lib: e.lib, id: e.id })));
+  const idPara = (tNome, e, usados) => {
+    const ok = (a) => a.lib && a.lib === e.lib && !usados.has(a.id);
+    const a = antigos.find((x) => x.t === letra(tNome) && ok(x)) || antigos.find(ok);
+    const id = a ? a.id : rnd(8); usados.add(id); return id;
+  };
+  const novo = (t) => { const usados = new Set(); const velho = (p.treinos || []).find((x) => letra(x.nome) === letra(t.nome)); return { id: velho ? velho.id : rnd(8), nome: t.nome, exercicios: t.ex.map((e) => ({ ...e, id: idPara(t.nome, e, usados) })) }; };
   const base = F.manter ? FICHAS[F.base || "pai2x"].treinos : null;
   p.treinos = F.treinos.map((t, i) => {
     if (!t) { const atual = (p.treinos || []).find((x) => x.nome === F.manter[i]); return atual || novo(base[i]); } // mantém o treino que a pessoa já tem
@@ -948,7 +959,7 @@ function startAdmin(S0, K0, ONLY) {
   }
   function lastFor(pid, ex) {
     for (const s of sessoesDe(pid)) {
-      const it = s.itens && (s.itens[ex.id] || Object.values(s.itens).find((x) => x.nome === exNome(ex)));
+      const it = s.itens && (s.itens[ex.id] || Object.values(s.itens).find((x) => x.nome === exNome(ex)) || (ex.lib ? Object.values(s.itens).find((x) => x.lib === ex.lib) : null));
       if (it && (it.carga != null || it.reps != null || it.feitas)) return { ...it, data: s.data };
     }
     return null;
@@ -1494,7 +1505,7 @@ function startAluno(S0, P) {
     const i = tr.findIndex((t) => t.id === last.treinoId); return i < 0 ? 0 : (i + 1) % tr.length;
   }
   function lastFor(ex) {
-    for (const s of A.sess) { const it = s.itens && (s.itens[ex.id] || Object.values(s.itens).find((x) => x.nome === exNome(ex))); if (it && (it.carga != null || it.reps != null || it.feitas || it.obs)) return { ...it, data: s.data }; }
+    for (const s of A.sess) { const it = s.itens && (s.itens[ex.id] || Object.values(s.itens).find((x) => x.nome === exNome(ex)) || (ex.lib ? Object.values(s.itens).find((x) => x.lib === ex.lib) : null)); if (it && (it.carga != null || it.reps != null || it.feitas || it.obs)) return { ...it, data: s.data }; }
     return null;
   }
   function weekDots() {
@@ -1890,6 +1901,7 @@ function startAluno(S0, P) {
       const obs = (inp.obs || "").trim();
       if (c || carga != null || reps != null || obs) {
         itens[ex.id] = { nome: exNome(ex), carga, reps, feitas: c };
+        if (ex.lib && !ex.troca) itens[ex.id].lib = ex.lib;
         if (series.length) itens[ex.id].series = series;
         if (obs) itens[ex.id].obs = obs;
         if (ex.troca) itens[ex.id].trocaDe = ex.original;
