@@ -280,16 +280,19 @@ function mountCanvases(root) {
   });
 }
 const theme3d = () => { const h = document.documentElement.classList; return !h.contains("sport") || h.contains("light") ? "light" : "dark"; };
-function anim3d(c) { const F = window.FIG3D; if (!F) return null; const lb = c.dataset.lib && LIB[c.dataset.lib]; const cand = [c.dataset.lib, lb && lb.anim, c.dataset.anim]; for (const n of cand) if (n && F.has(n)) return n; return "parado"; }
+function anim3d(c) { const F = window.FIG3D, V = window.FIG3DV; if (!F && !V) return null; const lb = c.dataset.lib && LIB[c.dataset.lib]; const cand = [c.dataset.lib, lb && lb.anim, c.dataset.anim]; for (const n of cand) if (n && ((V && V.has(n)) || (F && F.has(n)))) return n; return "parado"; }
 function paint(c, t) {
   const ctx = c.getContext("2d"); ctx.setTransform(c._dpr, 0, 0, c._dpr, 0, 0);
   const a3 = anim3d(c);
   if (a3) {
     const tt = c._w < 150 ? 1.3 : t; if (c._w < 150) c._static = true;
     const t0 = performance.now();
-    const X3 = window.FIG3DX;
-    if (X3 && X3.status === "idle") { X3.onReady = () => canv.forEach((cc) => { cc._static = false; cc._n = 0; cc._ms = null; if (cc.isConnected) paint(cc, performance.now() / 1000); }); X3.start(""); }
-    if (!(X3 && X3.draw(ctx, a3, tt, c._w, c._h, theme3d(), c._dpr)) && !(window.FIG3DGL && window.FIG3DGL.draw(ctx, a3, tt, c._w, c._h, theme3d(), c._dpr))) window.FIG3D.draw(ctx, a3, tt, c._w, c._h, theme3d());
+    const XV = window.FIG3DV, X3 = XV && XV.has(a3) && XV.status !== "fail" ? null : window.FIG3DX; // boneco novo; o antigo só se o novo falhar
+    const again = () => canv.forEach((cc) => { cc._static = false; cc._n = 0; cc._ms = null; if (cc.isConnected) paint(cc, performance.now() / 1000); });
+    if (XV && XV.has(a3) && XV.status === "idle") { XV.onReady = again; XV.start(""); }
+    if (X3 && X3.status === "idle") { X3.onReady = again; X3.start(""); }
+    const F3 = window.FIG3D, hasOld = F3 && F3.has(a3);
+    if (!(XV && XV.draw(ctx, a3, tt, c._w, c._h, theme3d(), c._dpr)) && !(X3 && hasOld && X3.draw(ctx, a3, tt, c._w, c._h, theme3d(), c._dpr)) && !(hasOld && window.FIG3DGL && window.FIG3DGL.draw(ctx, a3, tt, c._w, c._h, theme3d(), c._dpr)) && F3) F3.draw(ctx, hasOld ? a3 : "prancha", tt, c._w, c._h, theme3d());
     // aparelho lento: o boneco para em vez de travar a tela
     const dt = performance.now() - t0; c._ms = c._ms == null ? dt : c._ms * 0.8 + dt * 0.2; c._n = (c._n || 0) + 1;
     if (c._n > 6 && c._ms > 45) c._static = true;
